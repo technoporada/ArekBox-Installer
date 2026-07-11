@@ -1,0 +1,26 @@
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Runtime / generated (created by bootstrap) — DO NOT commit
+venvs/
+osint-tools/
+logs/
+backups/
+configs/
+
+# Local
+.env
+*.local

@@ -72,10 +72,25 @@ HTML = """
     #log { background:#0a0a0a; border:1px solid #0f0; padding:10px; height:240px; overflow:auto; white-space:pre-wrap; margin-top:15px; }
     .card { border:1px solid #0f0; padding:10px; margin:8px 0; }
     a { color:#0ff; }
+    .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .tab { background:#111; color:#0f0; border:1px solid #0f0; padding:10px 18px;
+           cursor:pointer; border-radius:6px; font-family:inherit; font-size:15px; }
+    .tab:hover { background:#0f0; color:#000; }
+    .tab.active { background:#0f0; color:#000; font-weight:bold; }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    iframe.viz { width:100%; height:86vh; border:1px solid #0f0; border-radius:6px; background:#000; }
 </style>
 </head>
 <body>
-<h1>📥 ArekBox yt-dlp Dashboard</h1>
+<h1>📥 ArekBox — Centrum Multimediów</h1>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('dl', this)">⬇ Pobieranie (yt-dlp)</button>
+  <button class="tab" onclick="showTab('viz', this)">🎵 Wizualizator Audio</button>
+  <a class="tab" href="http://localhost:5050" target="_blank">⚡ Dashboard systemu</a>
+</div>
+
+<div id="panel-dl" class="panel active">
 <div class="row">
     <input id="url" style="width:60%" placeholder="Wklej URL (YouTube, itp.)">
 </div>
@@ -96,8 +111,21 @@ HTML = """
 <div id="log"></div>
 <h2>📂 Pobrane pliki</h2>
 <div id="files"></div>
+</div>
+
+<div id="panel-viz" class="panel">
+  <p style="color:#aaa;">Wizualizator audio (Web Audio API) — wybierz plik lub mikrofon, przełączaj tryby i motywy:</p>
+  <iframe class="viz" src="/visualizer"></iframe>
+</div>
 
 <script>
+function showTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-dl').classList.remove('active');
+  document.getElementById('panel-viz').classList.remove('active');
+  el.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+}
 let activeId = null;
 function start() {
     const url = document.getElementById('url').value.trim();
@@ -136,6 +164,18 @@ loadFiles();
 @app.route("/")
 def index():
     return render_template_string(HTML)
+
+
+VISUALIZER_FILE = os.path.join(AREKBOX_DIR, "audio_visualizer.html")
+
+
+@app.route("/visualizer")
+def visualizer():
+    try:
+        with open(VISUALIZER_FILE, encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        return f"<h1>Brak pliku wizualizatora: {e}</h1>", 500
 
 
 @app.route("/api/download", methods=["POST"])

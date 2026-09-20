@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-bash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint bash scripts
+        run: shellcheck modules/*.sh arekbox.sh arekbox-dashboard.sh yt-dlp-dashboard.sh ffmpeg-scripts/*.sh media-scripts/*.sh
+
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install flake8
+      - run: flake8 --select=E9,F63,F7,F82 --ignore=E501 dashboard/*.py
+
+  validate:
+    runs-on: ubuntu-latest
+    needs: [lint-bash, lint-python]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify all modules exist
+        run: |
+          for mod in ai_tools dev_tools system_info fan_thinkpad backup_tools gaming_tools terminal_tools optimize_tools pdf_tools security_tools multimedia_tools cleanup_tools; do
+            if [ ! -f "modules/${mod}.sh" ]; then
+              echo "MISSING: modules/${mod}.sh"
+              exit 1
+            fi
+          done
+          echo "All 12 modules present"
+      - name: Verify dashboard files
+        run: |
+          for f in arekbox_dashboard.py audio_visualizer.html yt_dlp_dashboard.py; do
+            if [ ! -f "dashboard/${f}" ]; then
+              echo "MISSING: dashboard/${f}"
+              exit 1
+            fi
+          done
+          echo "All dashboard files present"

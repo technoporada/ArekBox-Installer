@@ -278,8 +278,8 @@ def api_processes():
             except Exception:
                 continue
         out.sort(key=lambda x: x["cpu"], reverse=True)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Internal server error"}), 500
     return jsonify(out[:limit])
 
 
@@ -301,8 +301,8 @@ def api_action():
         if post == "top15":
             out = "\n".join(out.splitlines()[:15])
         return jsonify({"ok": True, "output": out[:4000]})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        return jsonify({"ok": False, "error": "Internal server error"}), 500
 
 
 @app.route("/api/launch", methods=["POST"])
@@ -314,8 +314,8 @@ def api_launch():
             start_new_session=True,
         )
         return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        return jsonify({"ok": False, "error": "Internal server error"}), 500
 
 
 @app.route("/yt-dlp")

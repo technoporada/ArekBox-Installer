@@ -174,8 +174,8 @@ def visualizer():
     try:
         with open(VISUALIZER_FILE, encoding="utf-8") as f:
             return f.read()
-    except Exception as e:
-        return f"<h1>Brak pliku wizualizatora: {e}</h1>", 500
+    except Exception:
+        return "<h1>Nie można wczytać wizualizatora.</h1>", 500
 
 
 @app.route("/api/download", methods=["POST"])

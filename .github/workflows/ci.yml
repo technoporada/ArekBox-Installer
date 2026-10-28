@@ -1,3 +1,5 @@
+permissions:
+  contents: read
 name: CI
 
 on:
@@ -8,7 +10,7 @@ on:
 
 jobs:
   lint-bash:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install shellcheck
@@ -17,7 +19,7 @@ jobs:
         run: shellcheck modules/*.sh arekbox.sh arekbox-dashboard.sh yt-dlp-dashboard.sh ffmpeg-scripts/*.sh media-scripts/*.sh
 
   lint-python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,7 +29,7 @@ jobs:
       - run: flake8 --select=E9,F63,F7,F82 --ignore=E501 dashboard/*.py
 
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [lint-bash, lint-python]
     steps:
       - uses: actions/checkout@v4

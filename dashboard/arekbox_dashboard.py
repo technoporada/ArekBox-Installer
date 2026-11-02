@@ -7,8 +7,10 @@ Otwórz:  http://localhost:5050
 import os
 import re
 import time
+import secrets
 import subprocess
-from flask import Flask, render_template_string, request, jsonify
+from functools import wraps
+from flask import Flask, render_template_string, request, jsonify, make_response
 
 AREKBOX_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MODULES_DIR = os.path.join(AREKBOX_DIR, "modules")
@@ -38,6 +40,11 @@ ACTIONS = {
 }
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("AREKBOX_DASHBOARD_SECRET") or secrets.token_hex(32)
+
+# Wymagany token do wszystkich endpointów API i strony głównej.
+# Ustaw AREKBOX_DASHBOARD_TOKEN w środowisku, otherwise generowany losowo przy starcie.
+DASHBOARD_TOKEN = os.environ.get("AREKBOX_DASHBOARD_TOKEN") or secrets.token_urlsafe(32)
 
 _net_prev = None
 _net_prev_t = 0.0
@@ -124,6 +131,71 @@ def system_stats():
     }
 
 
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization", "")
+        if token.startswith("Bearer "):
+            token = token[7:]
+        cookie_token = request.cookies.get("arekbox_token", "")
+        if not token or not cookie_token:
+            return jsonify({"error": "uwierzytelnianie wymagane"}), 401
+        if token != DASHBOARD_TOKEN and cookie_token != DASHBOARD_TOKEN:
+            return jsonify({"error": "nieprawidłowy token"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="UTF-8"><title>ArekBox — Login</title>
+<style>body{background:#000;color:#0f0;font-family:monospace;padding:40px}
+input{background:#111;color:#0f0;border:1px solid #0f0;padding:8px}
+button{background:#0f0;color:#000;border:none;padding:8px 16px;cursor:pointer}
+.card{border:1px solid #0f0;padding:20px;max-width:400px;margin:auto}</style></head>
+<body>
+<div class="card"><h2>ArekBox Dashboard — Login</h2>
+<form method="post" action="/login">
+<label>Token:</label><br>
+<input name="token" style="width:100%"><br><br>
+<button type="submit">Zaloguj</button>
+</form>
+<p style="font-size:12px;color:#aaa">Token wyświetlony w konsoli przy starcie dashboardu.</p>
+</div></body></html>
+"""
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        token = request.form.get("token", "")
+        if token == DASHBOARD_TOKEN:
+            resp = make_response("", 302)
+            resp.headers["Location"] = "/"
+            resp.set_cookie("arekbox_token", token, httponly=True, samesite="Lax")
+            return resp
+        return "Nieprawidłowy token", 401
+    return LOGIN_HTML
+
+
+@app.before_request
+def _auth_guard():
+    public = {"/login", "/static/", "/favicon.ico"}
+    if any(request.path.startswith(p) for p in public):
+        return
+    cookie_token = request.cookies.get("arekbox_token", "")
+    if cookie_token == DASHBOARD_TOKEN:
+        return
+    # API endpoints wymagają tokena też w nagłówku (dla skryptów)
+    if request.path.startswith("/api/"):
+        token = request.headers.get("Authorization", "").replace("Bearer ", "", 1)
+        if not token or token != DASHBOARD_TOKEN:
+            return jsonify({"error": "uwierzytelnianie wymagane"}), 401
+        return
+    # Strona HTML — przekieruj na login jeśli brak sesji
+    return make_response(LOGIN_HTML, 200)
+
+
 HTML = """
 <!DOCTYPE html>
 <html lang="pl">
@@ -156,6 +228,8 @@ HTML = """
   a { color:var(--cyan); }
   pre { background:#060606; border:1px solid #1a1a1a; padding:10px; max-height:220px; overflow:auto; white-space:pre-wrap; }
   nav a { margin-right:18px; }
+  .token { background:#111; border:1px solid #0f0; padding:8px; font-family:monospace; font-size:12px;
+           word-break:break-all; margin-top:10px; display:inline-block; }
 </style>
 </head>
 <body>
@@ -163,7 +237,14 @@ HTML = """
 <nav>
   <a href="/yt-dlp" target="_blank">📥 yt-dlp Dashboard</a>
   <a href="#" onclick="runTerm();return false;">🖥 Otwórz menu ArekBox (terminal)</a>
+  <a href="/login" style="float:right">🔒 Zmień token</a>
 </nav>
+
+<div style="margin:15px 0;">
+  <strong>Token API:</strong> <span class="token" id="tok">ładowanie...</span>
+  <button onclick="copyToken()" style="margin-left:8px">Kopiuj</button>
+</div>
+<p style="font-size:12px;color:#888">Użyj: curl -H "Authorization: Bearer &lt;token&gt;" http://localhost:5050/api/stats</p>
 
 <h2>📊 Monitor systemu</h2>
 <div class="grid">
@@ -201,8 +282,25 @@ HTML = """
 <pre id="actout"></pre>
 
 <script>
+function loadToken() {
+  fetch('/api/stats', {headers:{'Authorization':'Bearer ' + document.cookie.match('(?:^|; )arekbox_token=([^;]+)'?.[1]||'')}})
+    .then(r=>r.ok?r.text():Promise.reject()).then(()=>{
+      const m = document.cookie.match('(?:^|; )arekbox_token=([^;]+)');
+      document.getElementById('tok').textContent = m ? m[1] : 'brak';
+    }).catch(()=>{
+      document.getElementById('tok').textContent = 'zaloguj się na /login';
+    });
+}
+function copyToken(){
+  const t=document.getElementById('tok').textContent;
+  if(t&&t!=='ładowanie...'&&t!=='zaloguj się na /login'){
+    navigator.clipboard.writeText(t); alert('Token skopiowany');
+  }
+}
 function poll() {
-  fetch('/api/stats').then(r=>r.json()).then(s=>{
+  const tok = document.cookie.match('(?:^|; )arekbox_token=([^;]+)');
+  const hdr = tok ? {'Authorization':'Bearer '+tok[1]} : {};
+  fetch('/api/stats',{headers:hdr}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
     document.getElementById('cpu').textContent = s.cpu + '%';
     document.getElementById('cpuBar').style.width = s.cpu + '%';
     document.getElementById('mem').textContent = s.mem_used_gb + '/' + s.mem_total_gb + 'G';
@@ -220,28 +318,34 @@ function poll() {
       ' ('+d.fstype+')</div><div class="v" style="font-size:16px">'+d.used_gb+'/'+d.total_gb+
       'G</div><div class="bar"><i style="width:'+d.percent+'%"></i></div></div>').join('');
   }).catch(()=>{});
-  fetch('/api/processes?limit=12').then(r=>r.json()).then(ps=>{
+  fetch('/api/processes?limit=12',{headers:hdr}).then(r=>r.ok?r.json():Promise.reject()).then(ps=>{
     document.getElementById('proctab').innerHTML = '<tr><th>PID</th><th>Name</th><th>CPU%</th><th>MEM%</th><th>User</th></tr>'+
       ps.map(p=>'<tr><td>'+p.pid+'</td><td>'+p.name+'</td><td>'+p.cpu+'</td><td>'+p.mem+'</td><td>'+(p.user||'?')+'</td></tr>').join('');
   }).catch(()=>{});
   setTimeout(poll, 2000);
 }
 function runTerm() {
-  fetch('/api/launch', {method:'POST'}).then(r=>r.json()).then(d=>{
-    document.getElementById('actout').textContent = d.ok ? 'Uruchomiono menu w nowym terminalu.' : 'Błąd: ' + d.error;
-  });
+  const tok = document.cookie.match('(?:^|; )arekbox_token=([^;]+)');
+  fetch('/api/launch', {method:'POST', headers:{'Authorization': tok ? 'Bearer '+tok[1] : ''}})
+    .then(r=>r.json()).then(d=>{
+      document.getElementById('actout').textContent = d.ok ? 'Uruchomiono menu w nowym terminalu.' : 'Błąd: ' + d.error;
+    });
 }
 document.querySelectorAll('#acts button').forEach(b=>b.onclick=()=>{
-  fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json'},
+  const tok = document.cookie.match('(?:^|; )arekbox_token=([^;]+)');
+  fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json',
+    'Authorization': tok ? 'Bearer '+tok[1] : ''},
     body:JSON.stringify({action:b.dataset.a})}).then(r=>r.json()).then(d=>{
       document.getElementById('actout').textContent = d.ok ? d.output : 'Błąd: ' + d.error;
     });
 });
-fetch('/api/modules').then(r=>r.json()).then(ms=>{
-  document.getElementById('mods').innerHTML = ms.map(m=>
-    '<div class="mod"><b style="color:#fff">'+m.file+'</b> — '+m.desc+
-    '<div class="fn">funkcje: '+(m.funcs.length?m.funcs.join(', '):'(brak)')+'</div></div>').join('');
-});
+fetch('/api/modules',{headers:{'Authorization':'Bearer '+(document.cookie.match('(?:^|; )arekbox_token=([^;]+)')?.[1]||'')}})
+  .then(r=>r.ok?r.json():Promise.reject()).then(ms=>{
+    document.getElementById('mods').innerHTML = ms.map(m=>
+      '<div class="mod"><b style="color:#fff">'+m.file+'</b> — '+m.desc+
+      '<div class="fn">funkcje: '+(m.funcs.length?m.funcs.join(', '):'(brak)')+'</div></div>').join('');
+  }).catch(()=>{});
+loadToken();
 poll();
 </script>
 </body>
@@ -255,12 +359,14 @@ def index():
 
 
 @app.route("/api/stats")
+@require_auth
 def api_stats():
     import psutil
     return jsonify(system_stats())
 
 
 @app.route("/api/processes")
+@require_auth
 def api_processes():
     import psutil
     limit = min(int(request.args.get("limit", 12)), 50)
@@ -284,11 +390,13 @@ def api_processes():
 
 
 @app.route("/api/modules")
+@require_auth
 def api_modules():
     return jsonify(MODULES)
 
 
 @app.route("/api/action", methods=["POST"])
+@require_auth
 def api_action():
     data = request.json or {}
     action = data.get("action", "")
@@ -306,8 +414,14 @@ def api_action():
 
 
 @app.route("/api/launch", methods=["POST"])
+@require_auth
 def api_launch():
+    # AREKBOX_TERMINAL może być manipulowane przez env — wymuszamy bezpieczną wartość
     term = os.environ.get("AREKBOX_TERMINAL", "x-terminal-emulator")
+    # Dozwolone terminale (whitelist) — zapobiega podaniu ścieżki do dowolnego binarnego
+    ALLOWED_TERMINALS = {"x-terminal-emulator", "gnome-terminal", "konsole", "xterm", "terminator", "alacritty", "kitty"}
+    if term not in ALLOWED_TERMINALS:
+        term = "x-terminal-emulator"
     try:
         subprocess.Popen(
             [term, "-e", f"bash {AREKBOX_DIR}/arekbox.sh"],
@@ -319,6 +433,7 @@ def api_launch():
 
 
 @app.route("/yt-dlp")
+@require_auth
 def yt_dlp_redirect():
     from flask import redirect
     return redirect("http://localhost:5000")
@@ -331,4 +446,6 @@ if __name__ == "__main__":
         print("[BŁĄD] Brak psutil. Zainstaluj: pip install psutil")
         raise SystemExit(1)
     print(f"[OK] ArekBox Dashboard na http://localhost:5050")
+    print(f"[OK] Token API: {DASHBOARD_TOKEN}")
+    print(f"[OK] Zaloguj się na http://localhost:5050/login")
     app.run(host="127.0.0.1", port=5050, debug=False)

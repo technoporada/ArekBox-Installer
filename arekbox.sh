@@ -1,6 +1,57 @@
 #!/bin/bash
+set -uo pipefail
 
 AREKBOX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export AREKBOX_DIR
+
+# --- Inteligentne wykrywanie środowiska (nie sztywno Mint/ThinkPad) ---
+DETECTED_OS="unknown"
+DETECTED_OS_VERSION=""
+DETECTED_PKG="unknown"
+DETECTED_IS_THINKPAD=0
+
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        DETECTED_OS="${ID:-unknown}"
+        DETECTED_OS_VERSION="${VERSION_ID:-}"
+    fi
+
+    if command -v apt-get &>/dev/null; then
+        DETECTED_PKG="apt"
+    elif command -v dnf &>/dev/null; then
+        DETECTED_PKG="dnf"
+    elif command -v yum &>/dev/null; then
+        DETECTED_PKG="yum"
+    elif command -v pacman &>/dev/null; then
+        DETECTED_PKG="pacman"
+    elif command -v zypper &>/dev/null; then
+        DETECTED_PKG="zypper"
+    fi
+}
+
+detect_hardware() {
+    if [ -r /sys/class/dmi/id/product_name ]; then
+        local prod
+        prod="$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)"
+        case "$prod" in
+            *ThinkPad*|*thinkpad*|*THINKPAD*) DETECTED_IS_THINKPAD=1 ;;
+        esac
+    fi
+}
+
+detect_os
+detect_hardware
+
+export DETECTED_OS DETECTED_OS_VERSION DETECTED_PKG DETECTED_IS_THINKPAD
+
+# Wykryj dostępny RAM (MB) — do doboru modeli AI
+DETECTED_RAM_MB=0
+if [ -r /proc/meminfo ]; then
+    DETECTED_RAM_MB="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+fi
+export DETECTED_RAM_MB
 
 export CYAN='\033[0;36m'
 export WHITE='\033[1;37m'
@@ -13,7 +64,7 @@ print_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 print_error() { echo -e "${RED}[BŁĄD]${NC} $1"; }
 print_info() { echo -e "${CYAN}[INFO]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[UWAGA]${NC} $1"; }
-pause() { read -p "Naciśnij Enter aby kontynuować..."; }
+pause() { read -r -p "Naciśnij Enter aby kontynuować..."; }
 
 for mod in "$AREKBOX_DIR"/modules/*.sh; do
     source <(head -n -1 "$mod")
@@ -27,17 +78,30 @@ PIP_PKGS="yt-dlp PyPDF2 pdf2image pyttsx3 gTTS openai-whisper faster-whisper req
 
 bootstrap() {
     print_info "Sprawdzam środowisko ArekBox..."
+    print_info "Wykryto: $DETECTED_OS $DETECTED_OS_VERSION | pakiety: $DETECTED_PKG | ThinkPad: $([ "$DETECTED_IS_THINKPAD" -eq 1 ] && echo TAK || echo NIE)"
     if ! sudo -n true 2>/dev/null; then
         print_warning "ArekBox potrzebuje sudo do instalacji pakietów systemowych."
         sudo -v || { print_error "Brak uprawnień sudo — przerwano konfigurację."; return 1; }
     fi
 
-    print_info "Aktualizuję listę pakietów (apt)..."
-    sudo apt update -y
+    if [ "$DETECTED_PKG" != "apt" ]; then
+        print_warning "ArekBox optymalizowany pod apt (Debian/Ubuntu/Mint). Wykryto: $DETECTED_PKG. Niektóre pakiety systemowe mogą nie zostać zainstalowane automatycznie."
+    fi
+
+    print_info "Aktualizuję listę pakietów ($DETECTED_PKG)..."
+    if [ "$DETECTED_PKG" = "apt" ]; then
+        sudo apt update -y
+    else
+        print_warning "Pomijam aktualizację repozytoriów — nieobsługiwany menedżer pakietów: $DETECTED_PKG"
+    fi
 
     print_info "Instaluję pakiety systemowe: $APT_PKGS"
-    # shellcheck disable=SC2086
-    sudo apt install -y $APT_PKGS
+    if [ "$DETECTED_PKG" = "apt" ]; then
+        # shellcheck disable=SC2086
+        sudo apt install -y $APT_PKGS
+    else
+        print_warning "Pomijam instalację pakietów systemowych — nieobsługiwany menedżer pakietów: $DETECTED_PKG"
+    fi
 
     if [ ! -d "$MEDIA_VENV" ]; then
         print_info "Tworzę środowisko wirtualne: $MEDIA_VENV"
@@ -83,7 +147,7 @@ fi
 
 if ! env_ready; then
     print_warning "Środowisko ArekBox nie jest skonfigurowane."
-    read -p "Czy chcesz je zainstalować teraz? (y/N): " setup_choice
+    read -r -p "Czy chcesz je zainstalować teraz? (y/N): " setup_choice
     if [[ "$setup_choice" == "y" || "$setup_choice" == "Y" ]]; then
         bootstrap || true
     else
@@ -114,7 +178,7 @@ while true; do
     echo "12) Cleanup Tools"
     echo "0)  Wyjście"
     echo ""
-    read -p "Wybierz opcję: " choice
+    read -r -p "Wybierz opcję: " choice
     case "$choice" in
         1) ai_tools_menu ;;
         2) dev_tools_menu ;;

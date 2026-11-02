@@ -7,7 +7,9 @@ Otwórz: http://localhost:5000
 import os
 import subprocess
 import threading
-from flask import Flask, render_template_string, request, jsonify
+import secrets
+from functools import wraps
+from flask import Flask, render_template_string, request, jsonify, make_response
 
 AREKBOX_DIR = os.path.dirname(os.path.abspath(__file__))
 MEDIA_VENV = os.path.abspath(os.path.join(AREKBOX_DIR, "..", "venvs", "media"))
@@ -15,44 +17,83 @@ YTDLP = os.path.join(MEDIA_VENV, "bin", "yt-dlp")
 DOWNLOAD_DIR = os.path.expanduser("~/H5N1-Downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+# Dozwolone rozszerzenia plików wyjściowych (przeciw path traversal / CVE-2024-38519, GHSA-c6mh-fpjc-4pr3)
+ALLOWED_EXTS = {
+    "mp4", "mkv", "webm", "avi", "mov", "flv", "wmv",
+    "mp3", "m4a", "ogg", "wav", "flac", "opus",
+    "srt", "vtt", "ass",
+}
+
 app = Flask(__name__)
+app.secret_key = os.environ.get("YTDLP_DASHBOARD_SECRET") or secrets.token_hex(32)
+DASHBOARD_TOKEN = os.environ.get("YTDLP_DASHBOARD_TOKEN") or secrets.token_urlsafe(32)
 
 downloads = {}
 counter = 0
 lock = threading.Lock()
 
 
-def run_download(did, url, mode, quality):
-    cmd = [YTDLP, "-o", os.path.join(DOWNLOAD_DIR, "%(title).200s.%(ext)s")]
-    if mode == "audio":
-        cmd += ["-x", "--audio-format", "mp3"]
-    else:
-        if quality == "best":
-            cmd += ["-f", "bestvideo+bestaudio/best"]
-        else:
-            cmd += ["-f", f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]"]
-    cmd.append(url)
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization", "")
+        if token.startswith("Bearer "):
+            token = token[7:]
+        cookie_token = request.cookies.get("yt_dlp_token", "")
+        if not token or not cookie_token:
+            return jsonify({"error": "uwierzytelnianie wymagane"}), 401
+        if token != DASHBOARD_TOKEN and cookie_token != DASHBOARD_TOKEN:
+            return jsonify({"error": "nieprawidłowy token"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1, cwd=DOWNLOAD_DIR,
-    )
-    with lock:
-        downloads[did]["pid"] = proc.pid
 
-    for line in proc.stdout:
-        with lock:
-            downloads[did]["log"] += line
-            if "[download]" in line and "%" in line:
-                try:
-                    downloads[did]["progress"] = line.split("%")[0].split()[-1]
-                except Exception:
-                    pass
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="UTF-8"><title>yt-dlp — Login</title>
+<style>body{background:#000;color:#0f0;font-family:monospace;padding:40px}
+input{background:#111;color:#0f0;border:1px solid #0f0;padding:8px}
+button{background:#0f0;color:#000;border:none;padding:8px 16px;cursor:pointer}
+.card{border:1px solid #0f0;padding:20px;max-width:400px;margin:auto}</style></head>
+<body>
+<div class="card"><h2>yt-dlp Dashboard — Login</h2>
+<form method="post" action="/login">
+<label>Token:</label><br>
+<input name="token" style="width:100%"><br><br>
+<button type="submit">Zaloguj</button>
+</form>
+<p style="font-size:12px;color:#aaa">Token wyświetlony w konsoli przy starcie dashboardu.</p>
+</div></body></html>
+"""
 
-    proc.wait()
-    with lock:
-        downloads[did]["status"] = "done" if proc.returncode == 0 else "error"
-        downloads[did]["code"] = proc.returncode
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        token = request.form.get("token", "")
+        if token == DASHBOARD_TOKEN:
+            resp = make_response("", 302)
+            resp.headers["Location"] = "/"
+            resp.set_cookie("yt_dlp_token", token, httponly=True, samesite="Lax")
+            return resp
+        return "Nieprawidłowy token", 401
+    return LOGIN_HTML
+
+
+@app.before_request
+def _auth_guard():
+    public = {"/login", "/static/", "/favicon.ico", "/visualizer"}
+    if any(request.path.startswith(p) for p in public):
+        return
+    cookie_token = request.cookies.get("yt_dlp_token", "")
+    if cookie_token == DASHBOARD_TOKEN:
+        return
+    if request.path.startswith("/api/"):
+        token = request.headers.get("Authorization", "").replace("Bearer ", "", 1)
+        if not token or token != DASHBOARD_TOKEN:
+            return jsonify({"error": "uwierzytelnianie wymagane"}), 401
+        return
+    return make_response(LOGIN_HTML, 200)
 
 
 HTML = """
@@ -80,6 +121,8 @@ HTML = """
     .panel { display:none; }
     .panel.active { display:block; }
     iframe.viz { width:100%; height:86vh; border:1px solid #0f0; border-radius:6px; background:#000; }
+    .token { background:#111; border:1px solid #0f0; padding:8px; font-family:monospace; font-size:12px;
+             word-break:break-all; margin-top:10px; display:inline-block; }
 </style>
 </head>
 <body>
@@ -88,6 +131,12 @@ HTML = """
   <button class="tab active" onclick="showTab('dl', this)">⬇ Pobieranie (yt-dlp)</button>
   <button class="tab" onclick="showTab('viz', this)">🎵 Wizualizator Audio</button>
   <a class="tab" href="http://localhost:5050" target="_blank">⚡ Dashboard systemu</a>
+  <a href="/login" style="float:right;margin-top:10px">🔒 Zmień token</a>
+</div>
+
+<div style="margin:15px 0;">
+  <strong>Token API:</strong> <span class="token" id="tok">ładowanie...</span>
+  <button onclick="copyToken()" style="margin-left:8px">Kopiuj</button>
 </div>
 
 <div id="panel-dl" class="panel active">
@@ -119,6 +168,16 @@ HTML = """
 </div>
 
 <script>
+function loadToken(){
+  const m=document.cookie.match('(?:^|; )yt_dlp_token=([^;]+)');
+  document.getElementById('tok').textContent=m?m[1]:'zaloguj się na /login';
+}
+function copyToken(){
+  const t=document.getElementById('tok').textContent;
+  if(t&&t!=='ładowanie...'&&t!=='zaloguj się na /login'){
+    navigator.clipboard.writeText(t); alert('Token skopiowany');
+  }
+}
 function showTab(id, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-dl').classList.remove('active');
@@ -132,13 +191,17 @@ function start() {
     if (!url) return alert('Wpisz URL!');
     const mode = document.getElementById('mode').value;
     const quality = document.getElementById('quality').value;
-    fetch('/api/download', {method:'POST', headers:{'Content-Type':'application/json'},
+    const tok = document.cookie.match('(?:^|; )yt_dlp_token=([^;]+)');
+    fetch('/api/download', {method:'POST', headers:{'Content-Type':'application/json',
+        'Authorization': tok ? 'Bearer '+tok[1] : ''},
         body: JSON.stringify({url, mode, quality})})
     .then(r=>r.json()).then(d=>{ activeId=d.id; poll(); });
 }
 function poll() {
     if (!activeId) return;
-    fetch('/api/progress/'+activeId).then(r=>r.json()).then(d=>{
+    const tok = document.cookie.match('(?:^|; )yt_dlp_token=([^;]+)');
+    fetch('/api/progress/'+activeId, {headers: tok ? {'Authorization':'Bearer '+tok[1]} : {}})
+    .then(r=>r.json()).then(d=>{
         document.getElementById('log').textContent = d.log;
         document.getElementById('log').scrollTop = 1e9;
         document.getElementById('status').innerHTML =
@@ -148,17 +211,23 @@ function poll() {
     });
 }
 function loadFiles() {
-    fetch('/api/list').then(r=>r.json()).then(files=>{
+    const tok = document.cookie.match('(?:^|; )yt_dlp_token=([^;]+)');
+    fetch('/api/list', {headers: tok ? {'Authorization':'Bearer '+tok[1]} : {}})
+    .then(r=>r.json()).then(files=>{
         document.getElementById('files').innerHTML = files.length
             ? files.map(f=>'<div class="card">'+f+'</div>').join('')
             : '<i>Brak plików.</i>';
     });
 }
 loadFiles();
+loadToken();
 </script>
 </body>
 </html>
 """
+
+
+VISUALIZER_FILE = os.path.join(AREKBOX_DIR, "audio_visualizer.html")
 
 
 @app.route("/")
@@ -166,7 +235,9 @@ def index():
     return render_template_string(HTML)
 
 
-VISUALIZER_FILE = os.path.join(AREKBOX_DIR, "audio_visualizer.html")
+@app.route("/login", methods=["GET", "POST"])  # zduplikowane celowo dla przejrzystości, nadpisane przez before_request
+def _login_dup():
+    return login()
 
 
 @app.route("/visualizer")
@@ -178,13 +249,53 @@ def visualizer():
         return f"<h1>Brak pliku wizualizatora: {e}</h1>", 500
 
 
+def run_download(did, url, mode, quality):
+    # --ignore-config: nie ładuj yt-dlp.conf z katalogu roboczego (przeciw CVE-2024-38519, GHSA-c6mh-fpjc-4pr3)
+    cmd = [YTDLP, "--ignore-config", "-o", os.path.join(DOWNLOAD_DIR, "%(title).200s.%(ext)s")]
+    if mode == "audio":
+        cmd += ["-x", "--audio-format", "mp3"]
+    else:
+        if quality == "best":
+            cmd += ["-f", "bestvideo+bestaudio/best"]
+        else:
+            cmd += ["-f", f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]"]
+    cmd.append(url)
+
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1, cwd=DOWNLOAD_DIR,
+    )
+    with lock:
+        downloads[did]["pid"] = proc.pid
+
+    for line in proc.stdout:
+        with lock:
+            downloads[did]["log"] += line
+            if "[download]" in line and "%" in line:
+                try:
+                    downloads[did]["progress"] = line.split("%")[0].split()[-1]
+                except Exception:
+                    pass
+
+    proc.wait()
+    with lock:
+        downloads[did]["status"] = "done" if proc.returncode == 0 else "error"
+        downloads[did]["code"] = proc.returncode
+
+
 @app.route("/api/download", methods=["POST"])
+@require_auth
 def api_download():
     global counter
     data = request.json
     url = (data.get("url") or "").strip()
     if not url:
         return jsonify({"error": "brak URL"}), 400
+    # Walidacja URL — tylko http(s), bez cudzysłowów i znaków especiais
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return jsonify({"error": "tylko http/https"}), 400
+    if any(ch in url for ch in '"\'`|;&$(){}[]<>"'):
+        return jsonify({"error": "niedozwolone znaki w URL"}), 400
     mode = data.get("mode", "best")
     quality = data.get("quality", "best")
     with lock:
@@ -196,6 +307,7 @@ def api_download():
 
 
 @app.route("/api/progress/<did>")
+@require_auth
 def api_progress(did):
     with lock:
         d = downloads.get(did, {"log": "", "status": "unknown", "progress": "", "code": None})
@@ -203,6 +315,7 @@ def api_progress(did):
 
 
 @app.route("/api/list")
+@require_auth
 def api_list():
     try:
         files = sorted(os.listdir(DOWNLOAD_DIR), reverse=True)
@@ -212,6 +325,7 @@ def api_list():
 
 
 @app.route("/api/stop/<did>", methods=["POST"])
+@require_auth
 def api_stop(did):
     with lock:
         d = downloads.get(did)
@@ -230,5 +344,7 @@ if __name__ == "__main__":
         print("[BŁĄD] Brak yt-dlp w venvie media. Uruchom: bash arekbox.sh --setup")
         raise SystemExit(1)
     print(f"[OK] Dashboard yt-dlp na http://localhost:5000")
+    print(f"[OK] Token API: {DASHBOARD_TOKEN}")
+    print(f"[OK] Zaloguj się na http://localhost:5000/login")
     print(f"[OK] Pliki trafiają do: {DOWNLOAD_DIR}")
     app.run(host="127.0.0.1", port=5000, debug=False)

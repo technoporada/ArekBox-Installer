@@ -12,7 +12,7 @@ cleanup_menu() {
         echo "7)  Pełne czyszczenie (wszystko)"
         echo "8)  Pokaż miejsce na dysku"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -r -p "Wybierz opcję: " choice
         case "$choice" in
             1) clean_apt ;;
             2) clean_user_cache ;;

@@ -10,7 +10,7 @@ security_menu() {
         echo "5)  Status bezpieczeństwa"
         echo "6)  Backup firewall"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -r -p "Wybierz opcję: " choice
         case "$choice" in
             1) configure_ufw ;;
             2) install_clamav ;;
@@ -22,6 +22,14 @@ security_menu() {
             *) echo -e "${RED}Niepoprawna opcja!${NC}"; pause ;;
         esac
     done
+}
+
+# Walidacja celu skanu: tylko litery, cyfry, kropki, dwukropki, ukośniki, myślniki
+valid_target() {
+    case "$1" in
+        ''|*[!a-zA-Z0-9./:-]*) return 1 ;;
+        *) return 0 ;;
+    esac
 }
 
 configure_ufw() {
@@ -45,11 +53,12 @@ install_clamav() {
 #!/bin/bash
 LOGFILE=$AREKBOX_DIR/logs/clamav-\$(date +%Y%m%d).log
 echo "=== Skanowanie \$(date) ===" >> "\$LOGFILE"
-clamscan -r /home/"\$USER" --log="\$LOGFILE" --infected --remove 2>/dev/null
+clamscan -r /home/"\$USER" --log="\$LOGFILE" --infected 2>/dev/null
 echo "=== Zakończone \$(date) ===" >> "\$LOGFILE"
 CLM
     chmod +x "$AREKBOX_DIR/clamav-scan.sh"
-    read -p "Dodać codzienne skanowanie do cron? (y/N): " cr
+    print_warning "Uwaga: skaner nie usuwa plików automatycznie (brak --reverse, aby uniknąć utraty danych przy fałszywych dodatnich)."
+    read -r -p "Dodać codzienne skanowanie do cron? (y/N): " cr
     [[ "$cr" == "y" || "$cr" == "Y" ]] && (crontab -l 2>/dev/null; echo "0 2 * * * $AREKBOX_DIR/clamav-scan.sh") | crontab -
     print_success "ClamAV zainstalowane!"
     pause
@@ -57,7 +66,9 @@ CLM
 
 install_fail2ban() {
     sudo apt install -y fail2ban 2>/dev/null
-    cat > /tmp/jail.local << 'F2B'
+    local jail_tmp
+    jail_tmp="$(mktemp)"
+    cat > "$jail_tmp" << 'F2B'
 [DEFAULT]
 bantime = 1800
 findtime = 600
@@ -69,7 +80,8 @@ filter = sshd
 logpath = /var/log/auth.log
 maxretry = 3
 F2B
-    sudo cp /tmp/jail.local /etc/fail2ban/jail.local
+    sudo cp "$jail_tmp" /etc/fail2ban/jail.local
+    rm -f "$jail_tmp"
     sudo systemctl restart fail2ban
     sudo systemctl enable fail2ban
     print_success "Fail2ban skonfigurowany!"
@@ -79,11 +91,19 @@ F2B
 nmap_scan() {
     sudo apt install -y nmap 2>/dev/null
     echo "1) Localhost  2) Konkretny host  3) Sieć lokalna"
-    read -p "Wybierz: " c
+    read -r -p "Wybierz: " c
     case "$c" in
         1) sudo nmap -sS -O localhost ;;
-        2) read -p "Adres IP: " t; sudo nmap -sS -O "$t" ;;
+        2)
+            read -r -p "Adres IP / host: " t
+            if ! valid_target "$t"; then
+                print_error "Nieprawidłowy adres (tylko litery, cyfry, kropki, dwukropki, ukośniki, myślniki)."
+                pause; return
+            fi
+            sudo nmap -sS -O "$t"
+            ;;
         3) sudo nmap -sn 192.168.1.0/24 ;;
+        *) print_error "Niepoprawny wybór." ;;
     esac
     pause
 }

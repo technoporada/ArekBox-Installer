@@ -12,7 +12,7 @@ optimize_menu() {
         echo "7)  Tweak systemowy"
         echo "8)  Backup przed optymalizacją"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) basic_cleanup ;;
             2) deep_cleanup ;;
@@ -43,6 +43,8 @@ deep_cleanup() {
     sudo apt autoclean
     sudo apt clean
     rm -rf ~/.cache/thumbnails/* 2>/dev/null
+    sudo rm -rf /tmp/* 2>/dev/null
+    sudo rm -rf /var/tmp/* 2>/dev/null
     print_success "Gotowe!"
     pause
 }
@@ -68,7 +70,7 @@ disk_optimize() {
     echo "Użycie dysku:"
     df -h /
     echo
-    read -r -p "Uruchomić fstrim (dla SSD)? (y/N): " tr
+    read -p "Uruchomić fstrim (dla SSD)? (y/N): " tr
     [[ "$tr" == "y" || "$tr" == "Y" ]] && sudo fstrim -v /
     pause
 }
@@ -77,16 +79,8 @@ process_manager() {
     echo -e "${CYAN}Top 20 procesów wg CPU:${NC}"
     ps aux --sort=-%cpu | head -20
     echo
-    read -r -p "Zabić proces PID? (puste = pomiń): " pid
-    if [[ -n "$pid" ]]; then
-        if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
-            print_error "PID musi być liczbą."
-        elif kill "$pid" 2>/dev/null; then
-            print_success "Zabito PID $pid"
-        else
-            print_error "Nie udało się zabić PID $pid"
-        fi
-    fi
+    read -p "Zabić proces PID? (puste = pomiń): " pid
+    [[ -n "$pid" ]] && kill "$pid" 2>/dev/null && print_success "Zabito PID $pid" || print_error "Nie udało się"
     pause
 }
 
@@ -95,7 +89,7 @@ system_tweaks() {
     echo "1) Ustaw swappiness=10 (lepszy czas życia SSD)"
     echo "2) Wyłącz błyskawiczny dźwięk terminala"
     echo "3) Zwiększ limit watch (dla watcherów plików)"
-    read -r -p "Wybierz (1-3): " c
+    read -p "Wybierz (1-3): " c
     case "$c" in
         1) echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w vm.swappiness=10; print_success "swappiness=10";;
         2) echo "blacklist pcspkr" | sudo tee /etc/modprobe.d/nobeep.conf >/dev/null; print_success "Dźwięk wyłączony";;

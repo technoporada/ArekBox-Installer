@@ -11,7 +11,7 @@ terminal_menu() {
         echo "6)  Wszystkie narzędzia terminala"
         echo "7)  Konfiguruj Tmux"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) install_tmux ;;
             2) sudo apt install -y fzf 2>/dev/null; print_success "fzf gotowe!"; pause ;;

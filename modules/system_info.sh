@@ -13,7 +13,7 @@ system_info_menu() {
         echo "8)  Zainstalowane pakiety (ile)"
         echo "9)  Uptime i obciążenie"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) full_info ;;
             2) cpu_mem ;;

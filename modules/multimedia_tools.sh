@@ -14,7 +14,7 @@ multimedia_menu() {
         echo "9)  Konwersja formatów"
         echo "10) yt-dlp Dashboard (Web)"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) install_ytdlp ;;
             2) install_mpv ;;
@@ -36,15 +36,15 @@ install_ytdlp() {
     python3 -m venv "$AREKBOX_DIR/venvs/media" 2>/dev/null
     source "$AREKBOX_DIR/venvs/media/bin/activate"
     pip install yt-dlp 2>/dev/null
-    cat > "$AREKBOX_DIR/media-scripts/download-audio.sh" << AEOF
+    cat > "$AREKBOX_DIR/media-scripts/download-audio.sh" << 'AEOF'
 #!/bin/bash
-source "$AREKBOX_DIR/venvs/media/bin/activate"
-yt-dlp --ignore-config -f 'bestaudio[ext=m4a]' --extract-audio --audio-format mp3 --audio-quality 0 "$1"
+source ~/arekbox/venvs/media/bin/activate
+yt-dlp -f 'bestaudio[ext=m4a]' --extract-audio --audio-format mp3 --audio-quality 0 "$1"
 AEOF
-    cat > "$AREKBOX_DIR/media-scripts/download-video.sh" << VEOF
+    cat > "$AREKBOX_DIR/media-scripts/download-video.sh" << 'VEOF'
 #!/bin/bash
-source "$AREKBOX_DIR/venvs/media/bin/activate"
-yt-dlp --ignore-config -f 'best[height<=1080]' "$1"
+source ~/arekbox/venvs/media/bin/activate
+yt-dlp -f 'best[height<=1080]' "$1"
 VEOF
     chmod +x "$AREKBOX_DIR/media-scripts/"*.sh
     print_success "yt-dlp gotowy! Użyj skryptów w $AREKBOX_DIR/media-scripts/"
@@ -86,8 +86,8 @@ FF2
 format_converter() {
     echo "1) Video → MP4"
     echo "2) Wyodrębnij audio → MP3"
-    read -r -p "Wybierz: " c
-    read -r -p "Ścieżka do pliku: " f
+    read -p "Wybierz: " c
+    read -p "Ścieżka do pliku: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     case "$c" in
         1) "$AREKBOX_DIR/ffmpeg-scripts/convert-to-mp4.sh" "$f" ;;

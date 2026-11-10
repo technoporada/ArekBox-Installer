@@ -12,7 +12,7 @@ gaming_menu() {
         echo "7)  Optymalizacja dla gier"
         echo "8)  Monitor FPS (MangoHud)"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) install_steam ;;
             2) install_lutris ;;
@@ -43,9 +43,7 @@ install_lutris() {
 
 install_wine() {
     sudo dpkg --add-architecture i386
-    curl -fsSL https://dl.winehq.org/wine-builds/winehq.key -o /tmp/winehq.key
-    sudo gpg --dearmor -o /usr/share/keyrings/wine.gpg /tmp/winehq.key 2>/dev/null
-    rm -f /tmp/winehq.key
+    curl -fsSL https://dl.winehq.org/wine-builds/winehq.key | sudo gpg --dearmor -o /usr/share/keyrings/wine.gpg 2>/dev/null
     echo "deb [signed-by=/usr/share/keyrings/wine.gpg] https://dl.winehq.org/wine-builds/ubuntu/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/wine.list
     sudo apt update && sudo apt install -y --install-recommends winehq-stable 2>/dev/null
     print_success "Wine zainstalowany!"
@@ -81,7 +79,7 @@ gaming_optimize() {
     echo "1) Ustaw govornor na 'performance'"
     echo "2) Wyłącz kompozycję (dla Cinnamon)"
     echo "3) Zainstaluj wszystkie narzędzia gaming"
-    read -r -p "Wybierz: " c
+    read -p "Wybierz: " c
     case "$c" in
         1) echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null 2>&1
            print_success "Governor = performance";;

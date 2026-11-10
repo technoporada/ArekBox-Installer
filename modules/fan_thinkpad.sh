@@ -1,19 +1,5 @@
 #!/bin/bash
 fan_menu() {
-    # Wykryj ThinkPad — nie psuj się na innym sprzęcie
-    if [ "${DETECTED_IS_THINKPAD:-0}" -ne 1 ]; then
-        if [ -r /sys/class/dmi/id/product_name ]; then
-            local prod
-            prod="$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)"
-            case "$prod" in
-                *ThinkPad*|*thinkpad*|*THINKPAD*) ;;
-                *) print_error "To nie jest ThinkPad — sterowanie wentylatorem niedostępne na tym sprzęcie."; pause; return ;;
-            esac
-        else
-            print_error "Nie można wykryć modelu sprzętu — sterowanie wentylatorem niedostępne."; pause; return
-        fi
-    fi
-
     while true; do
         clear
         echo -e "${CYAN}=== WENTYLATOR THINKPAD ===${NC}"
@@ -26,7 +12,7 @@ fan_menu() {
         echo "7) Level 4 (max)"
         echo "8) Monitoruj temp/fan (live)"
         echo "0) Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) fan_status ;;
             2) set_fan auto ;;

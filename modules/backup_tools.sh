@@ -10,7 +10,7 @@ backup_menu() {
         echo "5) Przywróć listę pakietów"
         echo "6) Lista backupów"
         echo "0) Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) backup_packages ;;
             2) backup_config ;;
@@ -53,7 +53,7 @@ backup_home() {
 }
 
 backup_tar() {
-    read -r -p "Katalog do backupu: " src
+    read -p "Katalog do backupu: " src
     [ ! -d "$src" ] && { print_error "Katalog nie istnieje!"; pause; return; }
     local out="$AREKBOX_DIR/backups/backup-$(basename "$src")-$(date +%Y%m%d-%H%M).tar.gz"
     tar -czf "$out" -C "$(dirname "$src")" "$(basename "$src")" 2>/dev/null
@@ -64,17 +64,8 @@ backup_tar() {
 restore_packages() {
     echo "Dostępne listy pakietów:"
     ls "$AREKBOX_DIR/backups/"*.list 2>/dev/null || { echo "Brak"; pause; return; }
-    read -r -p "Ścieżka do pliku .list: " f
-    # Walidacja: plik musi znajdować się w katalogu backups ArekBox
-    local real_f
-    real_f="$(realpath "$f" 2>/dev/null || echo "")"
-    local backups_real
-    backups_real="$(realpath "$AREKBOX_DIR/backups" 2>/dev/null || echo "")"
-    if [[ -z "$real_f" || -z "$backups_real" || "$real_f" != "$backups_real"/* ]]; then
-        print_error "Plik musi znajdować się w $AREKBOX_DIR/backups/!"
-        pause; return
-    fi
-    [ ! -f "$real_f" ] && { print_error "Plik nie istnieje!"; pause; return; }
+    read -p "Ścieżka do pliku .list: " f
+    [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     sudo dpkg --clear-selections
     sudo dpkg --set-selections < "$f"
     sudo apt-get dselect-upgrade -y

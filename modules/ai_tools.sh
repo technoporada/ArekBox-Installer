@@ -16,7 +16,7 @@ ai_tools_menu() {
         echo "9)  Chatbot lokalny (Python)"
         echo "10) Status usług AI"
         echo "0)  Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) install_ollama ;;
             2) manage_ollama_models ;;
@@ -40,36 +40,20 @@ install_ollama() {
         print_warning "Ollama już zainstalowana: $(ollama --version)"
         return
     fi
-    curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh
-    sh /tmp/ollama-install.sh
-    rm -f /tmp/ollama-install.sh
+    curl -fsSL https://ollama.com/install.sh | sh
     sudo systemctl enable ollama 2>/dev/null
     sudo systemctl start ollama 2>/dev/null
     sleep 3
     if systemctl is-active --quiet ollama 2>/dev/null; then
         print_success "Ollama uruchomiona!"
     else
-        print_warning "Uruchamianie w trybie użytkownika (tylko localhost)..."
-        OLLAMA_HOST=127.0.0.1 nohup ollama serve > "$AREKBOX_DIR/logs/ollama.log" 2>&1 &
+        print_warning "Uruchamianie w trybie użytkownika..."
+        nohup ollama serve > "$AREKBOX_DIR/logs/ollama.log" 2>&1 &
         sleep 5
     fi
-    print_warning "Uwaga: Ollama działa tylko na 127.0.0.1:11434 — nie wystawiaj jej na sieć (ryzyko RCE, patrz CVE-2024-37032, CVE-2026-42248)."
-    print_info "Dobieram modele do dostępnego RAM (${DETECTED_RAM_MB:-0} MB)..."
-
-    MODELS_TO_PULL="llama3.2:3b qwen2.5:1.5b phi3.5:3.8b"
-
-    # Nie ściągaj modeli większych niż ~60% RAM
-    if [ "${DETECTED_RAM_MB:-0}" -lt 4096 ]; then
-        MODELS_TO_PULL="llama3.2:1b qwen2.5:0.5b"
-        print_warning "Mało RAM — ściągam tylko lekkie modele (1B/0.5B)."
-    elif [ "${DETECTED_RAM_MB:-0}" -lt 8192 ]; then
-        MODELS_TO_PULL="llama3.2:3b qwen2.5:1.5b"
-        print_info "Średni RAM — ściągam modele 3B i 1.5B."
-    fi
-
-    for m in $MODELS_TO_PULL; do
-        ollama pull "$m" 2>/dev/null && print_success "Pobrano $m" || print_warning "Nie udało się pobrać $m"
-    done
+    print_info "Pobieranie podstawowych modeli..."
+    ollama pull llama3.2:3b 2>/dev/null
+    ollama pull phi3:mini 2>/dev/null
     print_success "Instalacja zakończona!"
     pause
 }
@@ -86,17 +70,17 @@ manage_ollama_models() {
         echo "6) Modele średnie"
         echo "7) Modele specjalistyczne"
         echo "0) Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1) ollama list 2>/dev/null || echo "Brak modeli lub Ollama niedostępna"; pause ;;
-            2) read -r -p "Nazwa modelu (np. llama3.2:1b): " m; [ -n "$m" ] && ollama pull "$m"; pause ;;
-            3) ollama list; read -r -p "Nazwa modelu do usunięcia: " m; [ -n "$m" ] && ollama rm "$m"; pause ;;
-            4) ollama list; read -r -p "Nazwa modelu: " m; [ -n "$m" ] && ollama run "$m" ;;
-            5) for m in llama3.2:1b qwen2.5:0.5b phi3.5:3.8b; do ollama pull "$m"; done; pause ;;
-            6) for m in llama3.2:3b qwen2.5:3b gemma3:4b; do ollama pull "$m"; done; pause ;;
-            7) echo "1) nomic-embed-text  2) llava:7b  3) deepseek-r1:1.5b  4) deepseek-coder:7b"
-               read -r -p "Wybierz (1-4): " s
-               case "$s" in 1) ollama pull nomic-embed-text;; 2) ollama pull llava:7b;; 3) ollama pull deepseek-r1:1.5b;; 4) ollama pull deepseek-coder:7b;; esac
+            2) read -p "Nazwa modelu (np. llama3.2:1b): " m; [ -n "$m" ] && ollama pull "$m"; pause ;;
+            3) ollama list; read -p "Nazwa modelu do usunięcia: " m; [ -n "$m" ] && ollama rm "$m"; pause ;;
+            4) ollama list; read -p "Nazwa modelu: " m; [ -n "$m" ] && ollama run "$m" ;;
+            5) for m in llama3.2:1b phi3:mini qwen2.5:0.5b; do ollama pull "$m"; done; pause ;;
+            6) for m in llama3.2:3b mistral:7b gemma:2b; do ollama pull "$m"; done; pause ;;
+            7) echo "1) nomic-embed-text  2) llava:7b  3) deepseek-coder:6.7b  4) wizard-math:7b"
+               read -p "Wybierz (1-4): " s
+               case "$s" in 1) ollama pull nomic-embed-text;; 2) ollama pull llava:7b;; 3) ollama pull deepseek-coder:6.7b;; 4) ollama pull wizard-math:7b;; esac
                pause ;;
             0) return ;;
         esac
@@ -111,7 +95,7 @@ ollama_quick_chat() {
     fi
     echo -e "${GREEN}Szybki chat z $model (wpisz 'quit' aby zakończyć)${NC}"
     while true; do
-        read -r -p "Ty: " input
+        read -p "Ty: " input
         [[ "$input" == "quit" ]] && break
         curl -s -X POST http://localhost:11434/api/generate \
             -d "{\"model\":\"$model\",\"prompt\":\"$input\",\"stream\":false}" 2>/dev/null | \
@@ -141,16 +125,14 @@ install_open_webui() {
     echo -e "${CYAN}Instalacja Open WebUI...${NC}"
     if ! command -v docker &>/dev/null; then
         print_info "Instalacja Docker..."
-        curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-        sh /tmp/get-docker.sh
-        rm -f /tmp/get-docker.sh
+        curl -fsSL https://get.docker.com | sh
         sudo usermod -aG docker "$USER"
         print_warning "Wyloguj się i zaloguj ponownie dla Dockera bez sudo"
     fi
     if docker ps -a --format "{{.Names}}" | grep -q "^open-webui$"; then
         docker stop open-webui 2>/dev/null; docker rm open-webui 2>/dev/null
     fi
-    docker run -d --name open-webui --restart always -p 127.0.0.1:3000:8080 \
+    docker run -d --name open-webui --restart always -p 3000:8080 \
         -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
         -v open-webui:/app/backend/data \
         --add-host=host.docker.internal:host-gateway \
@@ -203,7 +185,7 @@ osint_tools_menu() {
         echo "6) Analiza zdjęć (EXIF)"
         echo "7) Analiza domen"
         echo "0) Powrót"
-        read -r -p "Wybierz opcję: " choice
+        read -p "Wybierz opcję: " choice
         case "$choice" in
             1)
                 sudo apt install -y curl wget whois nmap exiftool imagemagick 2>/dev/null

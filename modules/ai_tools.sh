@@ -12,9 +12,8 @@ ai_tools_menu() {
         echo "5)  Zainstaluj Open WebUI (Docker)"
         echo "6)  TTS Tools (espeak, festival, Python)"
         echo "7)  Zainstaluj Whisper (STT)"
-        echo "8)  OSINT Tools"
-        echo "9)  Chatbot lokalny (Python)"
-        echo "10) Status usług AI"
+        echo "8)  Chatbot lokalny (Python)"
+        echo "9)  Status usług AI"
         echo "0)  Powrót"
         read -p "Wybierz opcję: " choice
         case "$choice" in
@@ -25,9 +24,8 @@ ai_tools_menu() {
             5) install_open_webui ;;
             6) install_tts_tools ;;
             7) install_whisper ;;
-            8) osint_tools_menu ;;
-            9) run_local_chatbot ;;
-            10) check_ai_services ;;
+            8) run_local_chatbot ;;
+            9) check_ai_services ;;
             0) return ;;
             *) echo -e "${RED}Niepoprawna opcja!${NC}"; pause ;;
         esac
@@ -171,54 +169,6 @@ install_whisper() {
     pip3 install --user openai-whisper faster-whisper 2>/dev/null
     print_success "Whisper zainstalowany! Użyj: whisper audio.mp3 --language Polish"
     pause
-}
-
-osint_tools_menu() {
-    while true; do
-        clear
-        echo -e "${CYAN}=== NARZĘDZIA OSINT ===${NC}"
-        echo "1) Instaluj podstawowe narzędzia"
-        echo "2) TheHarvester"
-        echo "3) Sherlock (username search)"
-        echo "4) Recon-ng"
-        echo "5) Spiderfoot"
-        echo "6) Analiza zdjęć (EXIF)"
-        echo "7) Analiza domen"
-        echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
-        case "$choice" in
-            1)
-                sudo apt install -y curl wget whois nmap exiftool imagemagick 2>/dev/null
-                pip3 install --user requests beautifulsoup4 lxml dnspython 2>/dev/null
-                mkdir -p "$AREKBOX_DIR/osint-tools"
-                print_success "Podstawowe narzędzia OSINT zainstalowane!"; pause ;;
-            2) cd "$AREKBOX_DIR/osint-tools" && git clone https://github.com/laramies/theHarvester.git 2>/dev/null && cd theHarvester && pip3 install --user -r requirements.txt 2>/dev/null; print_success "TheHarvester gotowy!"; pause ;;
-            3) cd "$AREKBOX_DIR/osint-tools" && git clone https://github.com/sherlock-project/sherlock.git 2>/dev/null && cd sherlock && pip3 install --user -r requirements.txt 2>/dev/null; print_success "Sherlock gotowy!"; pause ;;
-            4) cd "$AREKBOX_DIR/osint-tools" && git clone https://github.com/lanmaster53/recon-ng.git 2>/dev/null && cd recon-ng && pip3 install --user -r REQUIREMENTS 2>/dev/null; print_success "Recon-ng gotowy!"; pause ;;
-            5) cd "$AREKBOX_DIR/osint-tools" && git clone https://github.com/smicallef/spiderfoot.git 2>/dev/null && cd spiderfoot && pip3 install --user -r requirements.txt 2>/dev/null; print_success "Spiderfoot gotowy!"; pause ;;
-            6)
-                cat > "$AREKBOX_DIR/osint-tools/image_analysis.sh" << 'IMGEOF'
-#!/bin/bash
-[ -z "$1" ] && { echo "Użycie: $0 <zdjęcie>"; exit 1; }
-echo "=== Analiza: $1 ==="
-exiftool "$1"
-IMGEOF
-                chmod +x "$AREKBOX_DIR/osint-tools/image_analysis.sh"
-                print_success "Skrypt analizy zdjęć: $AREKBOX_DIR/osint-tools/image_analysis.sh"; pause ;;
-            7)
-                cat > "$AREKBOX_DIR/osint-tools/domain_info.sh" << 'DOMEOF'
-#!/bin/bash
-[ -z "$1" ] && { echo "Użycie: $0 <domena>"; exit 1; }
-echo "=== Informacje o domenie: $1 ==="
-whois "$1" 2>/dev/null | head -20
-echo "--- DNS ---"
-dig "$1" 2>/dev/null | head -20
-DOMEOF
-                chmod +x "$AREKBOX_DIR/osint-tools/domain_info.sh"
-                print_success "Skrypt analizy domen: $AREKBOX_DIR/osint-tools/domain_info.sh"; pause ;;
-            0) return ;;
-        esac
-    done
 }
 
 run_local_chatbot() {

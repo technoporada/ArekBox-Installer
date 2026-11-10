@@ -71,12 +71,12 @@ show_help() {
     echo "konfigurację środowiska, jeśli ta nie została jeszcze wykonana."
 }
 
-if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     show_help
     exit 0
 fi
 
-if [[ "$1" == "--setup" ]]; then
+if [[ "${1:-}" == "--setup" ]]; then
     bootstrap
     exit 0
 fi

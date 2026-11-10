@@ -161,9 +161,18 @@ HTML = """
 <body>
 <h1>⚡ AREKBOX DASHBOARD</h1>
 <nav>
-  <a href="/yt-dlp" target="_blank">📥 yt-dlp Dashboard</a>
   <a href="#" onclick="runTerm();return false;">🖥 Otwórz menu ArekBox (terminal)</a>
 </nav>
+
+<h2>🛠 Szybkie akcje (read-only)</h2>
+<div id="acts">
+  <button data-a="free">free -h</button>
+  <button data-a="df">df -h</button>
+  <button data-a="uptime">uptime</button>
+  <button data-a="uname">uname -a</button>
+  <button data-a="ps">ps (top)</button>
+</div>
+<pre id="actout"></pre>
 
 <h2>📊 Monitor systemu</h2>
 <div class="grid">
@@ -190,16 +199,6 @@ HTML = """
 <h2>🧩 Moduły ArekBox</h2>
 <div id="mods"></div>
 
-<h2>🛠 Szybkie akcje (read-only)</h2>
-<div id="acts">
-  <button data-a="free">free -h</button>
-  <button data-a="df">df -h</button>
-  <button data-a="uptime">uptime</button>
-  <button data-a="uname">uname -a</button>
-  <button data-a="ps">ps (top)</button>
-</div>
-<pre id="actout"></pre>
-
 <script>
 function poll() {
   fetch('/api/stats').then(r=>r.json()).then(s=>{
@@ -224,7 +223,7 @@ function poll() {
     document.getElementById('proctab').innerHTML = '<tr><th>PID</th><th>Name</th><th>CPU%</th><th>MEM%</th><th>User</th></tr>'+
       ps.map(p=>'<tr><td>'+p.pid+'</td><td>'+p.name+'</td><td>'+p.cpu+'</td><td>'+p.mem+'</td><td>'+(p.user||'?')+'</td></tr>').join('');
   }).catch(()=>{});
-  setTimeout(poll, 2000);
+  setTimeout(poll, 10000);
 }
 function runTerm() {
   fetch('/api/launch', {method:'POST'}).then(r=>r.json()).then(d=>{
@@ -239,8 +238,7 @@ document.querySelectorAll('#acts button').forEach(b=>b.onclick=()=>{
 });
 fetch('/api/modules').then(r=>r.json()).then(ms=>{
   document.getElementById('mods').innerHTML = ms.map(m=>
-    '<div class="mod"><b style="color:#fff">'+m.file+'</b> — '+m.desc+
-    '<div class="fn">funkcje: '+(m.funcs.length?m.funcs.join(', '):'(brak)')+'</div></div>').join('');
+    '<div class="mod"><b style="color:#fff">'+m.file+'</b></div>').join('');
 });
 poll();
 </script>

@@ -71,7 +71,9 @@ restore_packages() {
     read -rp "Ścieżka do pliku .list: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     sudo dpkg --clear-selections
-    sudo sh -c "dpkg --set-selections < $f"
+    # shellcheck disable=SC2024
+    # Redirect < "$f" wykonuje shell (nie sudo), więc plik jest bezpiecznie cytowany.
+    sudo dpkg --set-selections < "$f"
     sudo apt-get dselect-upgrade -y
     print_success "Pakiety przywrócone!"
     pause

@@ -40,7 +40,9 @@ bootstrap() {
     fi
 
     print_info "Tworzę/aktualizuję venv media..."
-    "$MEDIA_VENV/bin/pip" install --upgrade pip setuptools wheel --trusted-host pypi.org --trusted-host files.pythonhosted.org 2>/dev/null || true
+    # Bezpieczne pip — opieramy się na systemowych certyfikatach CA (ca-certificates + update-ca-certificates powyżej).
+    # NIE używamy --trusted-host, bo to omija weryfikację SSL/TLS i tworzy lukę bezpieczeństwa.
+    "$MEDIA_VENV/bin/pip" install --upgrade pip setuptools wheel 2>/dev/null || true
     print_info "Pakiety Python instalowane na żądanie w modułach (nie automatycznie)."
 
     print_success "Środowisko ArekBox skonfigurowane!"

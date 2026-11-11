@@ -18,12 +18,12 @@ multimedia_menu() {
         case "$choice" in
             1) install_ytdlp ;;
             2) install_mpv ;;
-            3) sudo snap install spotify 2>/dev/null; print_success "Spotify zainstalowane!"; pause ;;
+            3) install_spotify ;;
             4) install_ffmpeg ;;
-            5) sudo apt install -y obs-studio 2>/dev/null; print_success "OBS gotowe!"; pause ;;
-            6) sudo apt install -y vlc 2>/dev/null; print_success "VLC gotowe!"; pause ;;
-            7) sudo apt install -y gimp 2>/dev/null; print_success "GIMP gotowe!"; pause ;;
-            8) sudo apt install -y audacity 2>/dev/null; print_success "Audacity gotowe!"; pause ;;
+            5) install_obs ;;
+            6) install_vlc ;;
+            7) install_gimp ;;
+            8) install_audacity ;;
             9) format_converter ;;
             10) yt_dlp_dashboard ;;
             0) return ;;
@@ -32,7 +32,56 @@ multimedia_menu() {
     done
 }
 
+install_spotify() {
+    if command -v spotify &>/dev/null; then
+        echo -e "${GREEN}Spotify: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo snap remove spotify 2>/dev/null && print_success "Spotify odinstalowany."
+        pause; return
+    fi
+    sudo snap install spotify 2>/dev/null && print_success "Spotify zainstalowane!"; pause
+}
+install_obs() {
+    if command -v obs &>/dev/null; then
+        echo -e "${GREEN}OBS: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y obs-studio 2>/dev/null && print_success "OBS odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y obs-studio 2>/dev/null && print_success "OBS gotowe!"; pause
+}
+install_vlc() {
+    if command -v vlc &>/dev/null; then
+        echo -e "${GREEN}VLC: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y vlc 2>/dev/null && print_success "VLC odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y vlc 2>/dev/null && print_success "VLC gotowe!"; pause
+}
+install_gimp() {
+    if command -v gimp &>/dev/null; then
+        echo -e "${GREEN}GIMP: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y gimp 2>/dev/null && print_success "GIMP odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y gimp 2>/dev/null && print_success "GIMP gotowe!"; pause
+}
+install_audacity() {
+    if command -v audacity &>/dev/null; then
+        echo -e "${GREEN}Audacity: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y audacity 2>/dev/null && print_success "Audacity odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y audacity 2>/dev/null && print_success "Audacity gotowe!"; pause
+}
 install_ytdlp() {
+    if [ -x "$AREKBOX_DIR/venvs/media/bin/yt-dlp" ]; then
+        echo -e "${GREEN}yt-dlp: zainstalowany ($($AREKBOX_DIR/venvs/media/bin/yt-dlp --version))${NC}"
+        read -p "Odinstalować yt-dlp? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            rm -rf "$AREKBOX_DIR/venvs/media"
+            print_success "yt-dlp odinstalowany."
+        fi
+        pause; return
+    fi
     python3 -m venv "$AREKBOX_DIR/venvs/media" 2>/dev/null
     source "$AREKBOX_DIR/venvs/media/bin/activate"
     pip install yt-dlp 2>/dev/null
@@ -52,6 +101,12 @@ VEOF
 }
 
 install_mpv() {
+    if command -v mpv &>/dev/null; then
+        echo -e "${GREEN}MPV: zainstalowany ($(mpv --version | head -1))${NC}"
+        read -p "Odinstalować MPV? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y mpv 2>/dev/null && print_success "MPV odinstalowany."
+        pause; return
+    fi
     sudo apt install -y mpv 2>/dev/null
     mkdir -p ~/.config/mpv
     cat > ~/.config/mpv/mpv.conf << 'MPVCFG'
@@ -67,6 +122,12 @@ MPVCFG
 }
 
 install_ffmpeg() {
+    if command -v ffmpeg &>/dev/null; then
+        echo -e "${GREEN}FFmpeg: zainstalowany ($(ffmpeg -version | head -1))${NC}"
+        read -p "Odinstalować FFmpeg? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y ffmpeg mediainfo exiftool 2>/dev/null && print_success "FFmpeg odinstalowany."
+        pause; return
+    fi
     sudo apt install -y ffmpeg mediainfo exiftool 2>/dev/null
     cat > "$AREKBOX_DIR/ffmpeg-scripts/convert-to-mp4.sh" << 'FF1'
 #!/bin/bash

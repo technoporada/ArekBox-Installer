@@ -39,6 +39,12 @@ configure_ufw() {
 }
 
 install_clamav() {
+    if command -v clamscan &>/dev/null; then
+        echo -e "${GREEN}ClamAV: zainstalowany${NC}"
+        read -p "Odinstalować ClamAV? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y clamav clamav-daemon clamav-freshclam 2>/dev/null && print_success "ClamAV odinstalowany."
+        pause; return
+    fi
     sudo apt install -y clamav clamav-daemon clamav-freshclam 2>/dev/null
     sudo freshclam 2>/dev/null
     cat > "$AREKBOX_DIR/clamav-scan.sh" << CLM
@@ -56,6 +62,16 @@ CLM
 }
 
 install_fail2ban() {
+    if systemctl is-active --quiet fail2ban 2>/dev/null; then
+        echo -e "${GREEN}Fail2ban: zainstalowany i aktywny${NC}"
+        read -p "Odinstalować Fail2ban? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo systemctl stop fail2ban 2>/dev/null
+            sudo apt remove -y fail2ban 2>/dev/null
+            print_success "Fail2ban odinstalowany."
+        fi
+        pause; return
+    fi
     sudo apt install -y fail2ban 2>/dev/null
     cat > /tmp/jail.local << 'F2B'
 [DEFAULT]

@@ -33,11 +33,18 @@ ai_tools_menu() {
 }
 
 install_ollama() {
-    echo -e "${CYAN}Instalacja Ollama...${NC}"
     if command -v ollama &>/dev/null; then
-        print_warning "Ollama już zainstalowana: $(ollama --version)"
-        return
+        echo -e "${GREEN}Ollama: zainstalowana ($(ollama --version))${NC}"
+        read -p "Odinstalować Ollama? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo systemctl stop ollama 2>/dev/null
+            sudo rm -f /usr/local/bin/ollama
+            sudo rm -rf /usr/share/ollama /var/lib/ollama
+            print_success "Ollama odinstalowana."
+        fi
+        pause; return
     fi
+    echo -e "${CYAN}Instalacja Ollama...${NC}"
     curl -fsSL https://ollama.com/install.sh | sh
     sudo systemctl enable ollama 2>/dev/null
     sudo systemctl start ollama 2>/dev/null
@@ -120,6 +127,16 @@ ollama_benchmark() {
 }
 
 install_open_webui() {
+    if docker ps -a --format "{{.Names}}" 2>/dev/null | grep -q "^open-webui$"; then
+        echo -e "${GREEN}Open WebUI: zainstalowane (kontener istnieje)${NC}"
+        read -p "Odinstalować Open WebUI? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            docker stop open-webui 2>/dev/null; docker rm open-webui 2>/dev/null
+            docker volume rm open-webui 2>/dev/null
+            print_success "Open WebUI odinstalowane."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja Open WebUI...${NC}"
     if ! command -v docker &>/dev/null; then
         print_info "Instalacja Docker..."
@@ -145,6 +162,16 @@ install_open_webui() {
 }
 
 install_tts_tools() {
+    if command -v espeak &>/dev/null && python3 -c "import pyttsx3" 2>/dev/null; then
+        echo -e "${GREEN}TTS: zainstalowane (espeak + pyttsx3)${NC}"
+        read -p "Odinstalować TTS? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y espeak espeak-ng festival festival-dev 2>/dev/null
+            pip3 uninstall -y pyttsx3 gTTS 2>/dev/null
+            print_success "TTS odinstalowane."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja narzędzi TTS...${NC}"
     sudo apt install -y espeak espeak-ng festival festival-dev 2>/dev/null
     pip3 install --user pyttsx3 gTTS 2>/dev/null
@@ -165,6 +192,15 @@ PYEOF
 }
 
 install_whisper() {
+    if python3 -c "import whisper" 2>/dev/null; then
+        echo -e "${GREEN}Whisper: zainstalowany${NC}"
+        read -p "Odinstalować Whisper? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            pip3 uninstall -y openai-whisper faster-whisper 2>/dev/null
+            print_success "Whisper odinstalowany."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja Whisper...${NC}"
     pip3 install --user openai-whisper faster-whisper 2>/dev/null
     print_success "Whisper zainstalowany! Użyj: whisper audio.mp3 --language Polish"

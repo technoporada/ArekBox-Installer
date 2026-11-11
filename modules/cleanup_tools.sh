@@ -50,7 +50,7 @@ clean_journal() {
     echo -e "${CYAN}Czyszczenie logów systemowych...${NC}"
     sudo journalctl --vacuum-time=3d
     sudo find /var/log -name "*.log" -type f -mtime +30 -delete 2>/dev/null
-    sudo find /var/log -name "*.gz" -delete 2>/dev/null
+    sudo find /var/log -name "*.gz" -type f -mtime +30 -delete 2>/dev/null
     print_success "Logi wyczyszczone!"
     pause
 }

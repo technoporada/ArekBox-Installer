@@ -80,7 +80,10 @@ process_manager() {
     ps aux --sort=-%cpu | head -20
     echo
     read -p "Zabić proces PID? (puste = pomiń): " pid
-    [[ -n "$pid" ]] && kill "$pid" 2>/dev/null && print_success "Zabito PID $pid" || print_error "Nie udało się"
+    if [[ -n "$pid" ]]; then
+        read -p "Na pewno zabić PID $pid? (y/N): " confirm
+        [[ "$confirm" == "y" || "$confirm" == "Y" ]] && kill "$pid" 2>/dev/null && print_success "Zabito PID $pid" || print_error "Nie udało się / anulowano"
+    fi
     pause
 }
 
@@ -91,9 +94,9 @@ system_tweaks() {
     echo "3) Zwiększ limit watch (dla watcherów plików)"
     read -p "Wybierz (1-3): " c
     case "$c" in
-        1) echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w vm.swappiness=10; print_success "swappiness=10";;
+        1) grep -q '^vm.swappiness=10' /etc/sysctl.conf 2>/dev/null || echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w vm.swappiness=10; print_success "swappiness=10";;
         2) echo "blacklist pcspkr" | sudo tee /etc/modprobe.d/nobeep.conf >/dev/null; print_success "Dźwięk wyłączony";;
-        3) echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w fs.inotify.max_user_watches=524288; print_success "Limit watch zwiększony";;
+        3) grep -q '^fs.inotify.max_user_watches=524288' /etc/sysctl.conf 2>/dev/null || echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w fs.inotify.max_user_watches=524288; print_success "Limit watch zwiększony";;
     esac
     pause
 }

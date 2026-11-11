@@ -29,12 +29,24 @@ gaming_menu() {
 }
 
 install_steam() {
+    if command -v steam &>/dev/null; then
+        echo -e "${GREEN}Steam: zainstalowany${NC}"
+        read -p "Odinstalować Steam? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y steam 2>/dev/null && print_success "Steam odinstalowany."
+        pause; return
+    fi
     sudo apt install -y steam 2>/dev/null
     print_success "Steam zainstalowany!"
     pause
 }
 
 install_lutris() {
+    if command -v lutris &>/dev/null; then
+        echo -e "${GREEN}Lutris: zainstalowany${NC}"
+        read -p "Odinstalować Lutris? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y lutris 2>/dev/null && print_success "Lutris odinstalowany."
+        pause; return
+    fi
     sudo add-apt-repository -y ppa:lutris-team/lutris 2>/dev/null
     sudo apt update && sudo apt install -y lutris 2>/dev/null
     print_success "Lutris zainstalowany!"
@@ -42,6 +54,16 @@ install_lutris() {
 }
 
 install_wine() {
+    if command -v wine &>/dev/null; then
+        echo -e "${GREEN}Wine: zainstalowany ($(wine --version))${NC}"
+        read -p "Odinstalować Wine? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y --purge winehq-stable 2>/dev/null
+            sudo rm -f /etc/apt/sources.list.d/wine.list /usr/share/keyrings/wine.gpg
+            print_success "Wine odinstalowany."
+        fi
+        pause; return
+    fi
     sudo dpkg --add-architecture i386
     curl -fsSL https://dl.winehq.org/wine-builds/winehq.key | sudo gpg --dearmor -o /usr/share/keyrings/wine.gpg 2>/dev/null
     echo "deb [signed-by=/usr/share/keyrings/wine.gpg] https://dl.winehq.org/wine-builds/ubuntu/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/wine.list
@@ -51,18 +73,40 @@ install_wine() {
 }
 
 install_gamemode() {
+    if command -v gamemoderun &>/dev/null; then
+        echo -e "${GREEN}GameMode: zainstalowany${NC}"
+        read -p "Odinstalować GameMode? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y gamemode 2>/dev/null && print_success "GameMode odinstalowany."
+        pause; return
+    fi
     sudo apt install -y gamemode 2>/dev/null
     print_success "GameMode zainstalowany! Użyj: gamemoderun <komenda>"
     pause
 }
 
 install_mangohud() {
+    if command -v mangohud &>/dev/null; then
+        echo -e "${GREEN}MangoHud: zainstalowany${NC}"
+        read -p "Odinstalować MangoHud? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y mangohud 2>/dev/null && print_success "MangoHud odinstalowany."
+        pause; return
+    fi
     sudo apt install -y mangohud 2>/dev/null
     print_success "MangoHud zainstalowany! Użyj: mangohud <komenda>"
     pause
 }
 
 install_heroic() {
+    if command -v heroic &>/dev/null; then
+        echo -e "${GREEN}Heroic: zainstalowany${NC}"
+        read -p "Odinstalować Heroic? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo snap remove heroic 2>/dev/null
+            sudo apt remove -y heroic 2>/dev/null
+            print_success "Heroic odinstalowany."
+        fi
+        pause; return
+    fi
     sudo snap install heroic --classic 2>/dev/null || {
         print_info "Pobieranie z GitHub..."
         curl -s https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest | \

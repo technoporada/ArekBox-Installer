@@ -28,7 +28,7 @@ First run auto-installs everything (apt packages + Python venv).
 
 | Module | Tools |
 |--------|-------|
-| **AI Tools** | Ollama, Open WebUI, TTS, Whisper, OSINT, local chatbot |
+| **AI Tools** | Ollama, Open WebUI, TTS, Whisper, local chatbot |
 | **Dev Tools** | Node.js, Python venv, Docker, Git, VS Code |
 | **System Info** | CPU, RAM, disk, processes, temperatures, network, battery |
 | **ThinkPad Fan** | Fan control (auto, manual, monitor) |

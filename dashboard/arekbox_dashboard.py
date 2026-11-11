@@ -34,7 +34,8 @@ ACTIONS = {
     "df": (["df", "-h"], None),
     "uptime": (["uptime"], None),
     "uname": (["uname", "-a"], None),
-    "ps": (["ps", "aux", "--sort=-%cpu"], "top15"),
+    "ps": (["ps", "-eo", "pid,user,%cpu,%mem,comm", "--sort=-%cpu"], "top11"),
+    "ports": (["ss", "-tulnp"], None),
 }
 
 app = Flask(__name__)
@@ -171,10 +172,11 @@ HTML = """
   <button data-a="uptime">uptime</button>
   <button data-a="uname">uname -a</button>
   <button data-a="ps">ps (top)</button>
+  <button data-a="ports">porty (ss)</button>
 </div>
 <pre id="actout"></pre>
 
-<h2>📊 Monitor systemu</h2>
+<h2>📊 Monitor systemu <button onclick="poll()" style="font-size:12px;padding:4px 8px;margin-left:10px;">🔄 Odśwież</button></h2>
 <div class="grid">
   <div class="card"><div class="l">CPU</div><div class="v" id="cpu">–</div>
     <div class="bar"><i id="cpuBar" style="width:0%"></i></div></div>
@@ -223,7 +225,7 @@ function poll() {
     document.getElementById('proctab').innerHTML = '<tr><th>PID</th><th>Name</th><th>CPU%</th><th>MEM%</th><th>User</th></tr>'+
       ps.map(p=>'<tr><td>'+p.pid+'</td><td>'+p.name+'</td><td>'+p.cpu+'</td><td>'+p.mem+'</td><td>'+(p.user||'?')+'</td></tr>').join('');
   }).catch(()=>{});
-  setTimeout(poll, 10000);
+  // auto-refresh wyłączony — ręczne odświeżanie przyciskiem
 }
 function runTerm() {
   fetch('/api/launch', {method:'POST'}).then(r=>r.json()).then(d=>{
@@ -296,8 +298,8 @@ def api_action():
     try:
         res = subprocess.run(args, capture_output=True, text=True, timeout=10, shell=False)
         out = res.stdout or res.stderr
-        if post == "top15":
-            out = "\n".join(out.splitlines()[:15])
+        if post == "top11":
+            out = "\n".join(out.splitlines()[:11])
         return jsonify({"ok": True, "output": out[:4000]})
     except Exception:
         return jsonify({"ok": False, "error": "Internal server error"}), 500

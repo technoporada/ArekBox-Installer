@@ -25,6 +25,16 @@ pdf_menu() {
 }
 
 install_pdf_tools() {
+    if command -v pdftotext &>/dev/null && python3 -c "import PyPDF2" 2>/dev/null; then
+        echo -e "${GREEN}Narzędzia PDF: zainstalowane${NC}"
+        read -p "Odinstalować? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y poppler-utils ghostscript pdftk-java 2>/dev/null
+            pip3 uninstall -y PyPDF2 pdf2image 2>/dev/null
+            print_success "Narzędzia PDF odinstalowane."
+        fi
+        pause; return
+    fi
     sudo apt install -y poppler-utils ghostscript pdftk-java 2>/dev/null
     pip3 install --user PyPDF2 pdf2image 2>/dev/null
     print_success "Narzędzia PDF zainstalowane!"

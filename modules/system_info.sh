@@ -98,9 +98,13 @@ network_info() {
 }
 
 package_count() {
-    echo "Pakiety (dpkg): $(dpkg -l | grep '^ii' | wc -l)"
-    echo "Pakiety (snap): $(snap list 2>/dev/null | wc -l)"
-    echo "Pakiety (pip): $(pip3 list 2>/dev/null | wc -l)"
+    echo -e "${YELLOW}dpkg:${NC} $(dpkg -l | grep '^ii' | wc -l) zainstalowanych"
+    echo -e "${YELLOW}snap:${NC} $(snap list 2>/dev/null | tail -n +2 | wc -l)"
+    echo
+    echo -e "${YELLOW}pip (system):${NC}"
+    pip3 list 2>/dev/null | tail -n +3 | column -t | head -30
+    echo
+    echo "(pokazano max 30; pełna lista: pip3 list)"
     pause
 }
 

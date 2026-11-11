@@ -14,10 +14,10 @@ terminal_menu() {
         read -p "Wybierz opcję: " choice
         case "$choice" in
             1) install_tmux ;;
-            2) sudo apt install -y fzf 2>/dev/null; print_success "fzf gotowe!"; pause ;;
-            3) sudo apt install -y bat 2>/dev/null; print_success "bat gotowe!"; pause ;;
-            4) sudo apt install -y ripgrep 2>/dev/null; print_success "ripgrep gotowe!"; pause ;;
-            5) sudo apt install -y htop btop 2>/dev/null; print_success "htop/btop gotowe!"; pause ;;
+            2) install_fzf ;;
+            3) install_bat ;;
+            4) install_ripgrep ;;
+            5) install_htop_btop ;;
             6) install_all_terminal ;;
             7) configure_tmux ;;
             0) return ;;
@@ -26,7 +26,45 @@ terminal_menu() {
     done
 }
 
+install_fzf() {
+    if command -v fzf &>/dev/null; then
+        echo -e "${GREEN}fzf: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y fzf 2>/dev/null && print_success "fzf odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y fzf 2>/dev/null; print_success "fzf gotowe!"; pause
+}
+install_bat() {
+    if command -v bat &>/dev/null || command -v batcat &>/dev/null; then
+        echo -e "${GREEN}bat: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y bat 2>/dev/null && print_success "bat odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y bat 2>/dev/null; print_success "bat gotowe!"; pause
+}
+install_ripgrep() {
+    if command -v rg &>/dev/null; then
+        echo -e "${GREEN}ripgrep: zainstalowany${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y ripgrep 2>/dev/null && print_success "ripgrep odinstalowany."
+        pause; return
+    fi
+    sudo apt install -y ripgrep 2>/dev/null; print_success "ripgrep gotowe!"; pause
+}
+install_htop_btop() {
+    if command -v htop &>/dev/null && command -v btop &>/dev/null; then
+        echo -e "${GREEN}htop/btop: zainstalowane${NC}"; read -p "Odinstalować? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y htop btop 2>/dev/null && print_success "htop/btop odinstalowane."
+        pause; return
+    fi
+    sudo apt install -y htop btop 2>/dev/null; print_success "htop/btop gotowe!"; pause
+}
 install_tmux() {
+    if command -v tmux &>/dev/null; then
+        echo -e "${GREEN}Tmux: zainstalowany ($(tmux -V))${NC}"
+        read -p "Odinstalować Tmux? (y/N): " u
+        [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y tmux 2>/dev/null && print_success "Tmux odinstalowany."
+        pause; return
+    fi
     sudo apt install -y tmux 2>/dev/null
     print_success "Tmux zainstalowany! Użyj: tmux new -s nazwa"
     pause

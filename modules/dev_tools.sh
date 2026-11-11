@@ -27,6 +27,16 @@ dev_tools_menu() {
 }
 
 install_nodejs() {
+    if command -v node &>/dev/null; then
+        echo -e "${GREEN}Node.js: zainstalowany ($(node --version), npm $(npm --version))${NC}"
+        read -p "Odinstalować Node.js? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y nodejs 2>/dev/null
+            sudo rm -f /etc/apt/sources.list.d/nodesource.list
+            print_success "Node.js odinstalowany."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja Node.js...${NC}"
     curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
     sudo apt-get install -y nodejs
@@ -66,6 +76,16 @@ manage_python_envs() {
 }
 
 install_docker() {
+    if command -v docker &>/dev/null; then
+        echo -e "${GREEN}Docker: zainstalowany ($(docker --version))${NC}"
+        read -p "Odinstalować Docker? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null
+            sudo rm -rf /var/lib/docker /etc/docker
+            print_success "Docker odinstalowany."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja Docker...${NC}"
     curl -fsSL https://get.docker.com | sh
     sudo usermod -aG docker "$USER"
@@ -74,6 +94,19 @@ install_docker() {
 }
 
 install_git() {
+    if command -v git &>/dev/null; then
+        echo -e "${GREEN}Git: zainstalowany ($(git --version))${NC}"
+        read -p "Przekonfigurować Git? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            read -p "Imię i nazwisko: " gn
+            read -p "Email: " ge
+            git config --global user.name "$gn"
+            git config --global user.email "$ge"
+            git config --global init.defaultBranch main
+            print_success "Git skonfigurowany!"
+        fi
+        pause; return
+    fi
     sudo apt install -y git
     read -p "Imię i nazwisko: " gn
     read -p "Email: " ge
@@ -85,6 +118,16 @@ install_git() {
 }
 
 install_vscode() {
+    if command -v code &>/dev/null; then
+        echo -e "${GREEN}VS Code: zainstalowany ($(code --version | head -1))${NC}"
+        read -p "Odinstalować VS Code? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y code 2>/dev/null
+            sudo rm -f /etc/apt/sources.list.d/vscode.list /usr/share/keyrings/vscode.gpg
+            print_success "VS Code odinstalowane."
+        fi
+        pause; return
+    fi
     echo -e "${CYAN}Instalacja VS Code...${NC}"
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/vscode.gpg 2>/dev/null
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/vscode.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list

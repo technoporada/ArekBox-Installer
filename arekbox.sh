@@ -26,6 +26,13 @@ MEDIA_VENV="$AREKBOX_DIR/venvs/media"
 
 bootstrap() {
     print_info "Sprawdzam środowisko ArekBox..."
+
+    # Aktualizacja list pakietów i certyfikatów SSL (naprawia błędy "certificate verify failed")
+    print_info "Aktualizuję repozytoria apt i certyfikaty CA..."
+    sudo apt update -y 2>/dev/null || print_warning "apt update nie powiódł się — sprawdź połączenie sieciowe."
+    sudo apt install -y ca-certificates curl wget gnupg 2>/dev/null || print_warning "Nie udało się zainstalować ca-certificates/curl/wget."
+    sudo update-ca-certificates 2>/dev/null || true
+
     # Pakiety systemowe instalowane na żądanie w modułach (nie automatycznie)
     if [ ! -d "$MEDIA_VENV" ]; then
         print_info "Tworzę środowisko wirtualne: $MEDIA_VENV"
@@ -33,7 +40,7 @@ bootstrap() {
     fi
 
     print_info "Tworzę/aktualizuję venv media..."
-    "$MEDIA_VENV/bin/pip" install --upgrade pip setuptools wheel
+    "$MEDIA_VENV/bin/pip" install --upgrade pip setuptools wheel --trusted-host pypi.org --trusted-host files.pythonhosted.org 2>/dev/null || true
     print_info "Pakiety Python instalowane na żądanie w modułach (nie automatycznie)."
 
     print_success "Środowisko ArekBox skonfigurowane!"

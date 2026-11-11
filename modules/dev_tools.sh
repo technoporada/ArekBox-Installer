@@ -4,22 +4,24 @@ dev_tools_menu() {
         clear
         echo -e "${CYAN}=== NARZĘDZIA DEVELOPERSKIE ===${NC}"
         echo "1)  Instaluj Node.js + npm"
-        echo "2)  Zarządzaj środowiskami Python"
-        echo "3)  Instaluj Docker"
-        echo "4)  Instaluj Git + konfiguracja"
-        echo "5)  Instaluj VS Code"
-        echo "6)  Instaluj podstawowe narzędzia dev"
-        echo "7)  Status środowisk"
+        echo "2)  Instaluj Java (OpenJDK)"
+        echo "3)  Zarządzaj środowiskami Python"
+        echo "4)  Instaluj Docker"
+        echo "5)  Instaluj Git + konfiguracja"
+        echo "6)  Instaluj VS Code"
+        echo "7)  Instaluj podstawowe narzędzia dev"
+        echo "8)  Status środowisk"
         echo "0)  Powrót"
         read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) install_nodejs ;;
-            2) manage_python_envs ;;
-            3) install_docker ;;
-            4) install_git ;;
-            5) install_vscode ;;
-            6) install_dev_basics ;;
-            7) env_status ;;
+            2) install_java ;;
+            3) manage_python_envs ;;
+            4) install_docker ;;
+            5) install_git ;;
+            6) install_vscode ;;
+            7) install_dev_basics ;;
+            8) env_status ;;
             0) return ;;
             *) echo -e "${RED}Niepoprawna opcja!${NC}"; pause ;;
         esac
@@ -150,6 +152,24 @@ env_status() {
     echo "Pip:    $(pip3 --version)"
     echo -e "\nŚrodowiska wirtualne:"
     ls "$AREKBOX_DIR/venvs/" 2>/dev/null || echo "Brak"
+    pause
+}
+
+install_java() {
+    if command -v java &>/dev/null; then
+        echo -e "${GREEN}Java: zainstalowana ($(java -version 2>&1 | head -1))${NC}"
+        read -rp "Odinstalować Java? (y/N): " u
+        if [[ "$u" == "y" || "$u" == "Y" ]]; then
+            sudo apt remove -y openjdk-* 2>/dev/null || true
+            print_success "Java odinstalowana."
+        fi
+        pause; return
+    fi
+    echo -e "${CYAN}Instalacja Java (OpenJDK)...${NC}"
+    sudo apt install -y openjdk-17-jdk 2>/dev/null || sudo apt install -y default-jdk 2>/dev/null || print_error "Nie udało się zainstalować Java — sprawdź certyfikaty i połączenie."
+    if command -v java &>/dev/null; then
+        print_success "Java zainstalowana: $(java -version 2>&1 | head -1)"
+    fi
     pause
 }
 

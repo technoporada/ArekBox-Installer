@@ -198,6 +198,9 @@ HTML = """
 <h2>🔥 Top procesy (CPU)</h2>
 <table id="proctab"><tr><th>PID</th><th>Name</th><th>CPU%</th><th>MEM%</th><th>User</th></tr></table>
 
+<h2>📦 Pakiety pip (system)</h2>
+<div id="pips" style="font-size:12px;color:#aaa;max-height:150px;overflow:auto;"></div>
+
 <h2>🧩 Moduły ArekBox</h2>
 <div id="mods"></div>
 
@@ -241,6 +244,9 @@ document.querySelectorAll('#acts button').forEach(b=>b.onclick=()=>{
 fetch('/api/modules').then(r=>r.json()).then(ms=>{
   document.getElementById('mods').innerHTML = ms.map(m=>
     '<div class="mod"><b style="color:#fff">'+m.file+'</b></div>').join('');
+});
+fetch('/api/pips').then(r=>r.json()).then(ps=>{
+  document.getElementById('pips').textContent = ps.map(p=>p.name+' '+p.version).join(', ');
 });
 poll();
 </script>
@@ -286,6 +292,16 @@ def api_processes():
 @app.route("/api/modules")
 def api_modules():
     return jsonify(MODULES)
+
+@app.route("/api/pips")
+def api_pips():
+    try:
+        res = subprocess.run(["pip3", "list", "--format=json"], capture_output=True, text=True, timeout=10)
+        import json as _j
+        pkgs = _j.loads(res.stdout) if res.stdout else []
+        return jsonify([{"name": p["name"], "version": p["version"]} for p in pkgs])
+    except Exception:
+        return jsonify([])
 
 
 @app.route("/api/action", methods=["POST"])

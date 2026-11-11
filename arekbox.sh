@@ -21,9 +21,9 @@ done
 
 MEDIA_VENV="$AREKBOX_DIR/venvs/media"
 
-APT_PKGS="curl wget git python3-pip python3-venv ffmpeg mediainfo exiftool imagemagick whois nmap poppler-utils ghostscript pdftk-java espeak espeak-ng festival festival-dev fzf bat ripgrep htop btop tmux lm-sensors ufw fail2ban clamav clamav-daemon clamav-freshclam mpv"
+APT_PKGS="curl wget git python3-pip python3-venv ffmpeg mediainfo exiftool imagemagick fzf bat ripgrep htop btop tmux ufw fail2ban"
 
-PIP_PKGS="yt-dlp PyPDF2 pdf2image pyttsx3 gTTS openai-whisper faster-whisper requests beautifulsoup4 lxml dnspython"
+PIP_PKGS="yt-dlp PyPDF2 pdf2image requests beautifulsoup4 lxml"
 
 bootstrap() {
     print_info "Sprawdzam środowisko ArekBox..."

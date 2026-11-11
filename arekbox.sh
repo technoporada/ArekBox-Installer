@@ -23,31 +23,19 @@ MEDIA_VENV="$AREKBOX_DIR/venvs/media"
 
 APT_PKGS="curl wget git python3-pip python3-venv ffmpeg mediainfo exiftool imagemagick fzf bat ripgrep htop btop tmux ufw fail2ban"
 
-PIP_PKGS="yt-dlp PyPDF2 pdf2image requests beautifulsoup4 lxml"
+# PIP_PKGS instalowane na żądanie w modułach
 
 bootstrap() {
     print_info "Sprawdzam środowisko ArekBox..."
-    if ! sudo -n true 2>/dev/null; then
-        print_warning "ArekBox potrzebuje sudo do instalacji pakietów systemowych."
-        sudo -v || { print_error "Brak uprawnień sudo — przerwano konfigurację."; return 1; }
-    fi
-
-    print_info "Aktualizuję listę pakietów (apt)..."
-    sudo apt update -y
-
-    print_info "Instaluję pakiety systemowe: $APT_PKGS"
-    # shellcheck disable=SC2086
-    sudo apt install -y $APT_PKGS
-
+    # Pakiety systemowe instalowane na żądanie w modułach (nie automatycznie)
     if [ ! -d "$MEDIA_VENV" ]; then
         print_info "Tworzę środowisko wirtualne: $MEDIA_VENV"
         python3 -m venv "$MEDIA_VENV"
     fi
 
-    print_info "Instaluję pakiety Python do venvu media..."
+    print_info "Tworzę/aktualizuję venv media..."
     "$MEDIA_VENV/bin/pip" install --upgrade pip setuptools wheel
-    # shellcheck disable=SC2086
-    "$MEDIA_VENV/bin/pip" install $PIP_PKGS
+    print_info "Pakiety Python instalowane na żądanie w modułach (nie automatycznie)."
 
     print_success "Środowisko ArekBox skonfigurowane!"
     print_info "Binaria (yt-dlp, pdf i inne) są w: $MEDIA_VENV/bin"

@@ -199,7 +199,7 @@ HTML = """
 <table id="proctab"><tr><th>PID</th><th>Name</th><th>CPU%</th><th>MEM%</th><th>User</th></tr></table>
 
 <h2>📦 Pakiety pip (system)</h2>
-<div id="pips" style="font-size:12px;color:#aaa;max-height:150px;overflow:auto;"></div>
+<div id="pips" style="max-height:200px;overflow:auto;line-height:1.8;"></div>
 
 <h2>🧩 Moduły ArekBox</h2>
 <div id="mods"></div>
@@ -246,7 +246,9 @@ fetch('/api/modules').then(r=>r.json()).then(ms=>{
     '<div class="mod"><b style="color:#fff">'+m.file+'</b></div>').join('');
 });
 fetch('/api/pips').then(r=>r.json()).then(ps=>{
-  document.getElementById('pips').textContent = ps.map(p=>p.name+' '+p.version).join(', ');
+  document.getElementById('pips').innerHTML = ps.map(p=>
+    '<span style="display:inline-block;margin:2px 4px;padding:2px 6px;background:#1a1a1a;border:1px solid #333;border-radius:4px;font-size:11px;">'+
+    p.name+' <span style="color:#888">'+p.version+'</span></span>').join('');
 });
 poll();
 </script>

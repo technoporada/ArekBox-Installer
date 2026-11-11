@@ -13,7 +13,7 @@ system_info_menu() {
         echo "8)  Zainstalowane pakiety (ile)"
         echo "9)  Uptime i obciążenie"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) full_info ;;
             2) cpu_mem ;;
@@ -32,7 +32,7 @@ system_info_menu() {
 
 full_info() {
     echo -e "${CYAN}SYSTEM:${NC} $(uname -a)"
-    echo -e "${CYAN}Dystrybucja:${NC} $(lsb_release -d 2>/dev/null || cat /etc/os-release 2>/dev/null | head -1)"
+    echo -e "${CYAN}Dystrybucja:${NC} $(lsb_release -d 2>/dev/null || head -1 /etc/os-release 2>/dev/null)"
     echo -e "${CYAN}Hostname:${NC} $(hostname)"
     echo -e "${CYAN}Użytkownik:${NC} $(whoami)"
     echo -e "${CYAN}Data:${NC} $(date)"
@@ -80,7 +80,8 @@ battery_info() {
             echo "  Status: $(cat "$bat/status" 2>/dev/null || echo N/A)"
             echo "  Poziom: $(cat "$bat/capacity" 2>/dev/null || echo N/A)%"
             [ -f "$bat/energy_full" ] && [ -f "$bat/energy_full_design" ] && {
-                local wear=$(echo "100 - 100 * $(cat "$bat/energy_full") / $(cat "$bat/energy_full_design")" | bc 2>/dev/null)
+                local wear
+                wear=$(echo "100 - 100 * $(cat "$bat/energy_full") / $(cat "$bat/energy_full_design")" | bc 2>/dev/null)
                 echo "  Zużycie: ${wear}%"
             }
         }
@@ -98,7 +99,7 @@ network_info() {
 }
 
 package_count() {
-    echo -e "${YELLOW}dpkg:${NC} $(dpkg -l | grep '^ii' | wc -l) zainstalowanych"
+    echo -e "${YELLOW}dpkg:${NC} $(dpkg -l | grep -c '^ii') zainstalowanych"
     echo -e "${YELLOW}snap:${NC} $(snap list 2>/dev/null | tail -n +2 | wc -l)"
     echo
     echo -e "${YELLOW}pip (system):${NC}"

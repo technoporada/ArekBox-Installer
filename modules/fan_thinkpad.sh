@@ -12,7 +12,7 @@ fan_menu() {
         echo "7) Level 4 (max)"
         echo "8) Monitoruj temp/fan (live)"
         echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) fan_status ;;
             2) set_fan auto ;;

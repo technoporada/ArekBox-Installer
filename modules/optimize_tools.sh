@@ -12,7 +12,7 @@ optimize_menu() {
         echo "7)  Tweak systemowy"
         echo "8)  Backup przed optymalizacją"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) basic_cleanup ;;
             2) deep_cleanup ;;
@@ -70,7 +70,7 @@ disk_optimize() {
     echo "Użycie dysku:"
     df -h /
     echo
-    read -p "Uruchomić fstrim (dla SSD)? (y/N): " tr
+    read -rp "Uruchomić fstrim (dla SSD)? (y/N): " tr
     [[ "$tr" == "y" || "$tr" == "Y" ]] && sudo fstrim -v /
     pause
 }
@@ -79,10 +79,16 @@ process_manager() {
     echo -e "${CYAN}Top 20 procesów wg CPU:${NC}"
     ps aux --sort=-%cpu | head -20
     echo
-    read -p "Zabić proces PID? (puste = pomiń): " pid
+    read -rp "Zabić proces PID? (puste = pomiń): " pid
     if [[ -n "$pid" ]]; then
-        read -p "Na pewno zabić PID $pid? (y/N): " confirm
-        [[ "$confirm" == "y" || "$confirm" == "Y" ]] && kill "$pid" 2>/dev/null && print_success "Zabito PID $pid" || print_error "Nie udało się / anulowano"
+        read -rp "Na pewno zabić PID $pid? (y/N): " confirm
+        if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+            if kill "$pid" 2>/dev/null; then
+                print_success "Zabito PID $pid"
+            else
+                print_error "Nie udało się / anulowano"
+            fi
+        fi
     fi
     pause
 }
@@ -92,7 +98,7 @@ system_tweaks() {
     echo "1) Ustaw swappiness=10 (lepszy czas życia SSD)"
     echo "2) Wyłącz błyskawiczny dźwięk terminala"
     echo "3) Zwiększ limit watch (dla watcherów plików)"
-    read -p "Wybierz (1-3): " c
+    read -rp "Wybierz (1-3): " c
     case "$c" in
         1) grep -q '^vm.swappiness=10' /etc/sysctl.conf 2>/dev/null || echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf >/dev/null; sudo sysctl -w vm.swappiness=10; print_success "swappiness=10";;
         2) echo "blacklist pcspkr" | sudo tee /etc/modprobe.d/nobeep.conf >/dev/null; print_success "Dźwięk wyłączony";;
@@ -102,7 +108,8 @@ system_tweaks() {
 }
 
 backup_before() {
-    local bdir="$AREKBOX_DIR/backups/system-$(date +%Y%m%d-%H%M%S)"
+    local bdir
+    bdir="$AREKBOX_DIR/backups/system-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$bdir"
     dpkg --get-selections > "$bdir/packages.list"
     cp /etc/apt/sources.list "$bdir/" 2>/dev/null

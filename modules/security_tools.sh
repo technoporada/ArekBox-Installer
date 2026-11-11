@@ -10,7 +10,7 @@ security_menu() {
         echo "5)  Status bezpieczeństwa"
         echo "6)  Backup firewall"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) configure_ufw ;;
             2) install_clamav ;;
@@ -41,7 +41,7 @@ configure_ufw() {
 install_clamav() {
     if command -v clamscan &>/dev/null; then
         echo -e "${GREEN}ClamAV: zainstalowany${NC}"
-        read -p "Odinstalować ClamAV? (y/N): " u
+        read -rp "Odinstalować ClamAV? (y/N): " u
         [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y clamav clamav-daemon clamav-freshclam 2>/dev/null && print_success "ClamAV odinstalowany."
         pause; return
     fi
@@ -55,7 +55,7 @@ clamscan -r /home/"\$USER" --log="\$LOGFILE" --infected --remove 2>/dev/null
 echo "=== Zakończone \$(date) ===" >> "\$LOGFILE"
 CLM
     chmod +x "$AREKBOX_DIR/clamav-scan.sh"
-    read -p "Dodać codzienne skanowanie do cron? (y/N): " cr
+    read -rp "Dodać codzienne skanowanie do cron? (y/N): " cr
     [[ "$cr" == "y" || "$cr" == "Y" ]] && (crontab -l 2>/dev/null; echo "0 2 * * * $AREKBOX_DIR/clamav-scan.sh") | crontab -
     print_success "ClamAV zainstalowane!"
     pause
@@ -64,7 +64,7 @@ CLM
 install_fail2ban() {
     if systemctl is-active --quiet fail2ban 2>/dev/null; then
         echo -e "${GREEN}Fail2ban: zainstalowany i aktywny${NC}"
-        read -p "Odinstalować Fail2ban? (y/N): " u
+        read -rp "Odinstalować Fail2ban? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo systemctl stop fail2ban 2>/dev/null
             sudo apt remove -y fail2ban 2>/dev/null
@@ -95,10 +95,10 @@ F2B
 nmap_scan() {
     sudo apt install -y nmap 2>/dev/null
     echo "1) Localhost  2) Konkretny host  3) Sieć lokalna"
-    read -p "Wybierz: " c
+    read -rp "Wybierz: " c
     case "$c" in
         1) sudo nmap -sS -O localhost ;;
-        2) read -p "Adres IP: " t; sudo nmap -sS -O "$t" ;;
+        2) read -rp "Adres IP: " t; sudo nmap -sS -O "$t" ;;
         3) sudo nmap -sn 192.168.1.0/24 ;;
     esac
     pause
@@ -114,10 +114,11 @@ security_status() {
 }
 
 backup_firewall() {
-    local bdir="$AREKBOX_DIR/backups/firewall-$(date +%Y%m%d)"
+    local bdir
+    bdir="$AREKBOX_DIR/backups/firewall-$(date +%Y%m%d)"
     mkdir -p "$bdir"
     [ -d /etc/ufw ] && sudo cp -r /etc/ufw "$bdir/" 2>/dev/null
-    sudo iptables-save > "$bdir/iptables-backup.txt" 2>/dev/null
+    iptables-save | sudo tee "$bdir/iptables-backup.txt" >/dev/null 2>&1
     print_success "Backup w $bdir"
     pause
 }

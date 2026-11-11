@@ -15,7 +15,7 @@ ai_tools_menu() {
         echo "8)  Chatbot lokalny (Python)"
         echo "9)  Status usług AI"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) install_ollama ;;
             2) manage_ollama_models ;;
@@ -35,7 +35,7 @@ ai_tools_menu() {
 install_ollama() {
     if command -v ollama &>/dev/null; then
         echo -e "${GREEN}Ollama: zainstalowana ($(ollama --version))${NC}"
-        read -p "Odinstalować Ollama? (y/N): " u
+        read -rp "Odinstalować Ollama? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo systemctl stop ollama 2>/dev/null
             sudo rm -f /usr/local/bin/ollama
@@ -75,16 +75,16 @@ manage_ollama_models() {
         echo "6) Modele średnie"
         echo "7) Modele specjalistyczne"
         echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) ollama list 2>/dev/null || echo "Brak modeli lub Ollama niedostępna"; pause ;;
-            2) read -p "Nazwa modelu (np. llama3.2:1b): " m; [ -n "$m" ] && ollama pull "$m"; pause ;;
-            3) ollama list; read -p "Nazwa modelu do usunięcia: " m; [ -n "$m" ] && ollama rm "$m"; pause ;;
-            4) ollama list; read -p "Nazwa modelu: " m; [ -n "$m" ] && ollama run "$m" ;;
+            2) read -rp "Nazwa modelu (np. llama3.2:1b): " m; [ -n "$m" ] && ollama pull "$m"; pause ;;
+            3) ollama list; read -rp "Nazwa modelu do usunięcia: " m; [ -n "$m" ] && ollama rm "$m"; pause ;;
+            4) ollama list; read -rp "Nazwa modelu: " m; [ -n "$m" ] && ollama run "$m" ;;
             5) for m in llama3.2:1b phi3:mini qwen2.5:0.5b; do ollama pull "$m"; done; pause ;;
             6) for m in llama3.2:3b mistral:7b gemma:2b; do ollama pull "$m"; done; pause ;;
             7) echo "1) nomic-embed-text  2) llava:7b  3) deepseek-coder:6.7b  4) wizard-math:7b"
-               read -p "Wybierz (1-4): " s
+               read -rp "Wybierz (1-4): " s
                case "$s" in 1) ollama pull nomic-embed-text;; 2) ollama pull llava:7b;; 3) ollama pull deepseek-coder:6.7b;; 4) ollama pull wizard-math:7b;; esac
                pause ;;
             0) return ;;
@@ -92,6 +92,7 @@ manage_ollama_models() {
     done
 }
 
+# shellcheck disable=SC2120
 ollama_quick_chat() {
     local model="${1:-llama3.2:3b}"
     if ! curl -s --connect-timeout 2 http://localhost:11434/api/tags >/dev/null; then
@@ -100,7 +101,7 @@ ollama_quick_chat() {
     fi
     echo -e "${GREEN}Szybki chat z $model (wpisz 'quit' aby zakończyć)${NC}"
     while true; do
-        read -p "Ty: " input
+        read -rp "Ty: " input
         [[ "$input" == "quit" ]] && break
         curl -s -X POST http://localhost:11434/api/generate \
             -d "{\"model\":\"$model\",\"prompt\":\"$input\",\"stream\":false}" 2>/dev/null | \
@@ -115,12 +116,17 @@ ollama_benchmark() {
     fi
     echo "=== BENCHMARK MODELI OLLAMA ==="
     ollama list 2>/dev/null | tail -n +2 | awk '{print $1}' | while read -r model; do
-        local start=$(date +%s.%N)
-        local resp=$(curl -s -X POST http://localhost:11434/api/generate \
+        local start
+        start=$(date +%s.%N)
+        local resp
+        resp=$(curl -s -X POST http://localhost:11434/api/generate \
             -d "{\"model\":\"$model\",\"prompt\":\"Hello in 10 words\",\"stream\":false}")
-        local end=$(date +%s.%N)
-        local dur=$(echo "$end - $start" | bc -l 2>/dev/null || echo "0")
-        local tokens=$(echo "$resp" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('response','').split()))" 2>/dev/null || echo "0")
+        local end
+        end=$(date +%s.%N)
+        local dur
+        dur=$(echo "$end - $start" | bc -l 2>/dev/null || echo "0")
+        local tokens
+        tokens=$(echo "$resp" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('response','').split()))" 2>/dev/null || echo "0")
         printf "%-20s %5.2fs %5d tokens\n" "$model" "$dur" "$tokens"
     done
     pause
@@ -129,7 +135,7 @@ ollama_benchmark() {
 install_open_webui() {
     if docker ps -a --format "{{.Names}}" 2>/dev/null | grep -q "^open-webui$"; then
         echo -e "${GREEN}Open WebUI: zainstalowane (kontener istnieje)${NC}"
-        read -p "Odinstalować Open WebUI? (y/N): " u
+        read -rp "Odinstalować Open WebUI? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             docker stop open-webui 2>/dev/null; docker rm open-webui 2>/dev/null
             docker volume rm open-webui 2>/dev/null
@@ -164,7 +170,7 @@ install_open_webui() {
 install_tts_tools() {
     if command -v espeak &>/dev/null && python3 -c "import pyttsx3" 2>/dev/null; then
         echo -e "${GREEN}TTS: zainstalowane (espeak + pyttsx3)${NC}"
-        read -p "Odinstalować TTS? (y/N): " u
+        read -rp "Odinstalować TTS? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y espeak espeak-ng festival festival-dev 2>/dev/null
             pip3 uninstall -y pyttsx3 gTTS 2>/dev/null
@@ -194,7 +200,7 @@ PYEOF
 install_whisper() {
     if python3 -c "import whisper" 2>/dev/null; then
         echo -e "${GREEN}Whisper: zainstalowany${NC}"
-        read -p "Odinstalować Whisper? (y/N): " u
+        read -rp "Odinstalować Whisper? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             pip3 uninstall -y openai-whisper faster-whisper 2>/dev/null
             print_success "Whisper odinstalowany."

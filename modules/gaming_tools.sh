@@ -12,7 +12,7 @@ gaming_menu() {
         echo "7)  Optymalizacja dla gier"
         echo "8)  Monitor FPS (MangoHud)"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) install_steam ;;
             2) install_lutris ;;
@@ -31,7 +31,7 @@ gaming_menu() {
 install_steam() {
     if command -v steam &>/dev/null; then
         echo -e "${GREEN}Steam: zainstalowany${NC}"
-        read -p "Odinstalować Steam? (y/N): " u
+        read -rp "Odinstalować Steam? (y/N): " u
         [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y steam 2>/dev/null && print_success "Steam odinstalowany."
         pause; return
     fi
@@ -43,7 +43,7 @@ install_steam() {
 install_lutris() {
     if command -v lutris &>/dev/null; then
         echo -e "${GREEN}Lutris: zainstalowany${NC}"
-        read -p "Odinstalować Lutris? (y/N): " u
+        read -rp "Odinstalować Lutris? (y/N): " u
         [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y lutris 2>/dev/null && print_success "Lutris odinstalowany."
         pause; return
     fi
@@ -56,7 +56,7 @@ install_lutris() {
 install_wine() {
     if command -v wine &>/dev/null; then
         echo -e "${GREEN}Wine: zainstalowany ($(wine --version))${NC}"
-        read -p "Odinstalować Wine? (y/N): " u
+        read -rp "Odinstalować Wine? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y --purge winehq-stable 2>/dev/null
             sudo rm -f /etc/apt/sources.list.d/wine.list /usr/share/keyrings/wine.gpg
@@ -75,7 +75,7 @@ install_wine() {
 install_gamemode() {
     if command -v gamemoderun &>/dev/null; then
         echo -e "${GREEN}GameMode: zainstalowany${NC}"
-        read -p "Odinstalować GameMode? (y/N): " u
+        read -rp "Odinstalować GameMode? (y/N): " u
         [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y gamemode 2>/dev/null && print_success "GameMode odinstalowany."
         pause; return
     fi
@@ -87,7 +87,7 @@ install_gamemode() {
 install_mangohud() {
     if command -v mangohud &>/dev/null; then
         echo -e "${GREEN}MangoHud: zainstalowany${NC}"
-        read -p "Odinstalować MangoHud? (y/N): " u
+        read -rp "Odinstalować MangoHud? (y/N): " u
         [[ "$u" == "y" || "$u" == "Y" ]] && sudo apt remove -y mangohud 2>/dev/null && print_success "MangoHud odinstalowany."
         pause; return
     fi
@@ -99,7 +99,7 @@ install_mangohud() {
 install_heroic() {
     if command -v heroic &>/dev/null; then
         echo -e "${GREEN}Heroic: zainstalowany${NC}"
-        read -p "Odinstalować Heroic? (y/N): " u
+        read -rp "Odinstalować Heroic? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo snap remove heroic 2>/dev/null
             sudo apt remove -y heroic 2>/dev/null
@@ -123,7 +123,7 @@ gaming_optimize() {
     echo "1) Ustaw govornor na 'performance'"
     echo "2) Wyłącz kompozycję (dla Cinnamon)"
     echo "3) Zainstaluj wszystkie narzędzia gaming"
-    read -p "Wybierz: " c
+    read -rp "Wybierz: " c
     case "$c" in
         1) echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null 2>&1
            print_success "Governor = performance";;

@@ -10,7 +10,7 @@ backup_menu() {
         echo "5) Przywróć listę pakietów"
         echo "6) Lista backupów"
         echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) backup_packages ;;
             2) backup_config ;;
@@ -25,14 +25,16 @@ backup_menu() {
 }
 
 backup_packages() {
-    local f="$AREKBOX_DIR/backups/packages-$(date +%Y%m%d).list"
+    local f
+    f="$AREKBOX_DIR/backups/packages-$(date +%Y%m%d).list"
     dpkg --get-selections > "$f"
     print_success "Lista pakietów zapisana: $f"
     pause
 }
 
 backup_config() {
-    local d="$AREKBOX_DIR/backups/config-$(date +%Y%m%d)"
+    local d
+    d="$AREKBOX_DIR/backups/config-$(date +%Y%m%d)"
     mkdir -p "$d"
     cp /etc/apt/sources.list "$d/" 2>/dev/null
     cp -r /etc/apt/sources.list.d "$d/" 2>/dev/null
@@ -43,7 +45,8 @@ backup_config() {
 }
 
 backup_home() {
-    local d="$AREKBOX_DIR/backups/home-$(date +%Y%m%d)"
+    local d
+    d="$AREKBOX_DIR/backups/home-$(date +%Y%m%d)"
     mkdir -p "$d"
     rsync -av --exclude='.cache' --exclude='.local/share/Trash' \
         --exclude='snap' --exclude='.mozilla/firefox/*.default*/cache' \
@@ -53,9 +56,10 @@ backup_home() {
 }
 
 backup_tar() {
-    read -p "Katalog do backupu: " src
+    read -rp "Katalog do backupu: " src
     [ ! -d "$src" ] && { print_error "Katalog nie istnieje!"; pause; return; }
-    local out="$AREKBOX_DIR/backups/backup-$(basename "$src")-$(date +%Y%m%d-%H%M).tar.gz"
+    local out
+    out="$AREKBOX_DIR/backups/backup-$(basename "$src")-$(date +%Y%m%d-%H%M).tar.gz"
     tar -czf "$out" -C "$(dirname "$src")" "$(basename "$src")" 2>/dev/null
     print_success "Archiwum: $out"
     pause
@@ -64,10 +68,10 @@ backup_tar() {
 restore_packages() {
     echo "Dostępne listy pakietów:"
     ls "$AREKBOX_DIR/backups/"*.list 2>/dev/null || { echo "Brak"; pause; return; }
-    read -p "Ścieżka do pliku .list: " f
+    read -rp "Ścieżka do pliku .list: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     sudo dpkg --clear-selections
-    sudo dpkg --set-selections < "$f"
+    sudo sh -c "dpkg --set-selections < $f"
     sudo apt-get dselect-upgrade -y
     print_success "Pakiety przywrócone!"
     pause
@@ -76,7 +80,8 @@ restore_packages() {
 list_backups() {
     echo -e "${CYAN}Backupy w $AREKBOX_DIR/backups/:${NC}"
     ls -lh "$AREKBOX_DIR/backups/" 2>/dev/null || echo "Pusty"
-    local size=$(du -sh "$AREKBOX_DIR/backups/" 2>/dev/null | cut -f1)
+    local size
+    size=$(du -sh "$AREKBOX_DIR/backups/" 2>/dev/null | cut -f1)
     echo "Całkowity rozmiar: $size"
     pause
 }

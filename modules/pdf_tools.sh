@@ -10,7 +10,7 @@ pdf_menu() {
         echo "5) PDF do obrazu"
         echo "6) Zainstaluj narzędzia PDF"
         echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) pdf_merge ;;
             2) pdf_split ;;
@@ -27,7 +27,7 @@ pdf_menu() {
 install_pdf_tools() {
     if command -v pdftotext &>/dev/null && python3 -c "import PyPDF2" 2>/dev/null; then
         echo -e "${GREEN}Narzędzia PDF: zainstalowane${NC}"
-        read -p "Odinstalować? (y/N): " u
+        read -rp "Odinstalować? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y poppler-utils ghostscript pdftk-java 2>/dev/null
             pip3 uninstall -y PyPDF2 pdf2image 2>/dev/null
@@ -42,8 +42,8 @@ install_pdf_tools() {
 }
 
 pdf_merge() {
-    read -p "Katalog z plikami PDF: " d
-    read -p "Nazwa wyjściowa (np. merged.pdf): " out
+    read -rp "Katalog z plikami PDF: " d
+    read -rp "Nazwa wyjściowa (np. merged.pdf): " out
     if command -v pdftk &>/dev/null; then
         pdftk "$d"/*.pdf cat output "$AREKBOX_DIR/$out"
         print_success "Połączono: $AREKBOX_DIR/$out"
@@ -64,9 +64,9 @@ print('Połączono:', '$AREKBOX_DIR/'+out)
 }
 
 pdf_split() {
-    read -p "Plik PDF: " f
+    read -rp "Plik PDF: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
-    read -p "Zakres stron (np. 1-3,5,7-9): " r
+    read -rp "Zakres stron (np. 1-3,5,7-9): " r
     [ -z "$r" ] && { print_error "Nie podano zakresu!"; pause; return; }
     python3 -c "
 import PyPDF2
@@ -97,7 +97,7 @@ print('Zapisano: $AREKBOX_DIR/split-output.pdf')
 }
 
 pdf_compress() {
-    read -p "Plik PDF: " f
+    read -rp "Plik PDF: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook \
        -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$f-compressed.pdf" "$f"
@@ -106,7 +106,7 @@ pdf_compress() {
 }
 
 pdf_extract_text() {
-    read -p "Plik PDF: " f
+    read -rp "Plik PDF: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     pdftotext "$f" "$f.txt"
     print_success "Tekst wyodrębniony: $f.txt"
@@ -114,7 +114,7 @@ pdf_extract_text() {
 }
 
 pdf_to_image() {
-    read -p "Plik PDF: " f
+    read -rp "Plik PDF: " f
     [ ! -f "$f" ] && { print_error "Plik nie istnieje!"; pause; return; }
     python3 -c "
 from pdf2image import convert_from_path

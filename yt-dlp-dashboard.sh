@@ -8,5 +8,5 @@ if [ ! -x "$MEDIA_VENV/bin/python" ]; then
 fi
 
 export PATH="$MEDIA_VENV/bin:$PATH"
-cd "$AREKBOX_DIR/dashboard"
+cd "$AREKBOX_DIR/dashboard" || exit
 exec "$MEDIA_VENV/bin/python" yt_dlp_dashboard.py

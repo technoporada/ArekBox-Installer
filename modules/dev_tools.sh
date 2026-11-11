@@ -11,7 +11,7 @@ dev_tools_menu() {
         echo "6)  Instaluj podstawowe narzędzia dev"
         echo "7)  Status środowisk"
         echo "0)  Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
             1) install_nodejs ;;
             2) manage_python_envs ;;
@@ -29,7 +29,7 @@ dev_tools_menu() {
 install_nodejs() {
     if command -v node &>/dev/null; then
         echo -e "${GREEN}Node.js: zainstalowany ($(node --version), npm $(npm --version))${NC}"
-        read -p "Odinstalować Node.js? (y/N): " u
+        read -rp "Odinstalować Node.js? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y nodejs 2>/dev/null
             sudo rm -f /etc/apt/sources.list.d/nodesource.list
@@ -55,19 +55,22 @@ manage_python_envs() {
         echo "4) Instaluj pakiety"
         echo "5) Eksportuj requirements.txt"
         echo "0) Powrót"
-        read -p "Wybierz opcję: " choice
+        read -rp "Wybierz opcję: " choice
         case "$choice" in
-            1) read -p "Nazwa: " e
+            1) read -rp "Nazwa: " e
                python3 -m venv "$AREKBOX_DIR/venvs/$e"
+               # shellcheck disable=SC1090
                source "$AREKBOX_DIR/venvs/$e/bin/activate"
                pip install --upgrade pip setuptools wheel
                print_success "Środowisko $e utworzone! source $AREKBOX_DIR/venvs/$e/bin/activate"
                pause ;;
             2) ls "$AREKBOX_DIR/venvs/" 2>/dev/null || echo "Brak"; pause ;;
-            3) read -p "Nazwa: " e; rm -rf "$AREKBOX_DIR/venvs/$e"; print_success "Usunięto $e"; pause ;;
-            4) read -p "Środowisko: " e; read -p "Pakiety: " p
-               source "$AREKBOX_DIR/venvs/$e/bin/activate" 2>/dev/null && pip install $p; pause ;;
-            5) read -p "Środowisko: " e
+            3) read -rp "Nazwa: " e; rm -rf "$AREKBOX_DIR/venvs/$e"; print_success "Usunięto $e"; pause ;;
+            4) read -rp "Środowisko: " e; read -rp "Pakiety: " p
+               # shellcheck disable=SC1090
+               source "$AREKBOX_DIR/venvs/$e/bin/activate" 2>/dev/null && pip install "$p"; pause ;;
+            5) read -rp "Środowisko: " e
+               # shellcheck disable=SC1090
                source "$AREKBOX_DIR/venvs/$e/bin/activate" 2>/dev/null && pip freeze > "$AREKBOX_DIR/venvs/$e-requirements.txt"
                print_success "Zapisano $AREKBOX_DIR/venvs/$e-requirements.txt"; pause ;;
             0) return ;;
@@ -78,7 +81,7 @@ manage_python_envs() {
 install_docker() {
     if command -v docker &>/dev/null; then
         echo -e "${GREEN}Docker: zainstalowany ($(docker --version))${NC}"
-        read -p "Odinstalować Docker? (y/N): " u
+        read -rp "Odinstalować Docker? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null
             sudo rm -rf /var/lib/docker /etc/docker
@@ -96,10 +99,10 @@ install_docker() {
 install_git() {
     if command -v git &>/dev/null; then
         echo -e "${GREEN}Git: zainstalowany ($(git --version))${NC}"
-        read -p "Przekonfigurować Git? (y/N): " u
+        read -rp "Przekonfigurować Git? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
-            read -p "Imię i nazwisko: " gn
-            read -p "Email: " ge
+            read -rp "Imię i nazwisko: " gn
+            read -rp "Email: " ge
             git config --global user.name "$gn"
             git config --global user.email "$ge"
             git config --global init.defaultBranch main
@@ -108,8 +111,8 @@ install_git() {
         pause; return
     fi
     sudo apt install -y git
-    read -p "Imię i nazwisko: " gn
-    read -p "Email: " ge
+    read -rp "Imię i nazwisko: " gn
+    read -rp "Email: " ge
     git config --global user.name "$gn"
     git config --global user.email "$ge"
     git config --global init.defaultBranch main
@@ -120,7 +123,7 @@ install_git() {
 install_vscode() {
     if command -v code &>/dev/null; then
         echo -e "${GREEN}VS Code: zainstalowany ($(code --version | head -1))${NC}"
-        read -p "Odinstalować VS Code? (y/N): " u
+        read -rp "Odinstalować VS Code? (y/N): " u
         if [[ "$u" == "y" || "$u" == "Y" ]]; then
             sudo apt remove -y code 2>/dev/null
             sudo rm -f /etc/apt/sources.list.d/vscode.list /usr/share/keyrings/vscode.gpg

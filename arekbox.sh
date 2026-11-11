@@ -13,15 +13,14 @@ print_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 print_error() { echo -e "${RED}[BŁĄD]${NC} $1"; }
 print_info() { echo -e "${CYAN}[INFO]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[UWAGA]${NC} $1"; }
-pause() { read -p "Naciśnij Enter aby kontynuować..."; }
+pause() { read -rp "Naciśnij Enter aby kontynuować..."; }
 
 for mod in "$AREKBOX_DIR"/modules/*.sh; do
+    # shellcheck disable=SC1090
     source <(head -n -1 "$mod")
 done
 
 MEDIA_VENV="$AREKBOX_DIR/venvs/media"
-
-APT_PKGS="curl wget git python3-pip python3-venv ffmpeg mediainfo exiftool imagemagick fzf bat ripgrep htop btop tmux ufw fail2ban"
 
 # PIP_PKGS instalowane na żądanie w modułach
 
@@ -71,7 +70,7 @@ fi
 
 if ! env_ready; then
     print_warning "Środowisko ArekBox nie jest skonfigurowane."
-    read -p "Czy chcesz je zainstalować teraz? (y/N): " setup_choice
+    read -rp "Czy chcesz je zainstalować teraz? (y/N): " setup_choice
     if [[ "$setup_choice" == "y" || "$setup_choice" == "Y" ]]; then
         bootstrap || true
     else
@@ -102,7 +101,7 @@ while true; do
     echo "12) Cleanup Tools"
     echo "0)  Wyjście"
     echo ""
-    read -p "Wybierz opcję: " choice
+    read -rp "Wybierz opcję: " choice
     case "$choice" in
         1) ai_tools_menu ;;
         2) dev_tools_menu ;;

@@ -8,13 +8,13 @@
 
 **Modular Linux toolkit — AI tools, dev environment, multimedia, security, optimization.**
 
-Single script installer with web dashboard, 12 category modules, and 50+ tools.
+Single script installer with web dashboard, 12 category modules, and 50+ tools. Wszystkie instalacje są interaktywne — nie wykonujemy kodu z internetu w ciemnie z uprawnieniami roota.
 
 > **Keywords:** `linux-toolkit` `ai-tools` `ollama` `multimedia` `security` `system-optimization` `bash` `flask` `yt-dlp` `ffmpeg`
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/technoporada/ArekBox-Installer.git
@@ -22,73 +22,119 @@ cd ArekBox-Installer
 bash arekbox.sh
 ```
 
-First run auto-installs everything (apt packages + Python venv).
+Przy pierwszym uruchomieniu zostaniesz zapytany o konfigurację środowiska (Python venv, certyfikaty CA). Pakiety systemowe i narzędzia są instalowane na żądanie z menu, nie wszystkie naraz.
 
-## What's Inside
+---
 
-| Module | Tools |
-|--------|-------|
-| **AI Tools** | Ollama, Open WebUI, TTS, Whisper, local chatbot |
-| **Dev Tools** | Node.js, Python venv, Docker, Git, VS Code |
-| **System Info** | CPU, RAM, disk, processes, temperatures, network, battery |
-| **ThinkPad Fan** | Fan control (auto, manual, monitor) |
-| **Backup Tools** | Package backup, config backup, home rsync, tar archives |
+## 📦 Co jest w środku
+
+| Moduł | Narzędzia |
+|-------|-----------|
+| **AI Tools** | Ollama, Open WebUI, TTS, Whisper, lokalny chatbot |
+| **Dev Tools** | Node.js, Python venv, Docker, Git, VS Code, Java (OpenJDK) |
+| **System Info** | CPU, RAM, dysk, procesy, temperatury, sieć, bateria |
+| **ThinkPad Fan** | Sterowanie wentylatorem (auto, manualny, monitor) |
+| **Backup Tools** | Kopia pakietów, konfiguracji, home (rsync), archiwa tar |
 | **Gaming Tools** | Steam, Lutris, Wine, GameMode, MangoHud, Heroic |
 | **Terminal Tools** | Tmux, fzf, bat, ripgrep, htop/btop |
-| **System Optimization** | RAM cache, disk cleanup, process manager, tweaks |
-| **PDF Tools** | Merge, split, compress, text extract, PDF→image |
-| **Security Tools** | UFW, ClamAV, Fail2ban, Nmap, firewall backup |
+| **System Optimization** | RAM cache, disk cleanup, menedżer procesów, tweaki |
+| **PDF Tools** | Scalanie, dzielenie, kompresja, ekstrakt tekstu, PDF→obraz |
+| **Security Tools** | UFW, ClamAV, Fail2ban, Nmap, kopia zapasowa firewalla |
 | **Multimedia Tools** | yt-dlp, MPV, FFmpeg, OBS, VLC, GIMP, Audacity |
-| **Cleanup Tools** | APT cache, logs, kernels, pip, snap cleanup |
+| **Cleanup Tools** | Cache APT, logi, stare kernele, pip, snap |
 
-## Dashboard
+---
+
+## 🖥️ Dashboard
 
 ```bash
 bash arekbox-dashboard.sh
 # → http://localhost:5050
 ```
 
-Web UI with live system monitor, module browser, audio visualizer.
+Web UI z na żywo monitorem systemu, przeglądarką modułów i wizualizatorem audio.
 
-## System Requirements
+Dodatkowo dostępny jest dashboard yt-dlp:
+
+```bash
+bash yt-dlp-dashboard.sh
+# → http://localhost:5000
+```
+
+---
+
+## 🔐 Bezpieczeństwo
+
+W ramach dbałości o bezpieczeństwo wprowadzono następujące zmiany:
+
+- **Brak `curl | sudo bash`** — skrypt nodesource (Node.js) oraz get.docker.com (Docker) są najpierw pobierane do `/tmp`, wyświetlany jest ich hash **SHA256** oraz link do źródła, a instalacja odbywa się dopiero po wyraźnym potwierdzeniu użytkownika (`y/N`). Skrypt tymczasowy jest usuwany po użyciu.
+- **Brak `--trusted-host` w pip** — instalacje Pythona opierają się na systemowych certyfikatach CA (`ca-certificates` + `update-ca-certificates` uruchamiane w `bootstrap()`), a nie na omijaniu weryfikacji SSL/TLS.
+- **Certyfikaty CA** — przy pierwszym uruchomieniu (`--setup`) aktualizowane są repozytoria apt i certyfikaty CA, co zapobiega błędom `certificate verify failed`.
+- **Bezpieczny odczyt plików** — np. przywracanie pakietów w `backup_tools.sh` używa cytowanego redirectu `< "$f"` zamiast niebezpiecznych konstrukcji z `sudo`.
+
+---
+
+## 📦 Wersje / Release
+
+| Wersja | Data | Co nowego |
+|--------|------|-----------|
+| `v1.1.0-security` | 2026-11-12 | Usunięto `curl | sudo bash` (Node.js, Docker) — pobierz + SHA256 + potwierdzenie; usunięto `--trusted-host` z pip; dodano `ca-certificates` + `update-ca-certificates`; przywrócono instalację Java (OpenJDK 17); naprawiono wszystkie ostrzeżenia ShellCheck |
+| `v1.0.0` | 2026-11-11 | Pierwsza stabilna wersja: 12 modułów, dashboard web, yt-dlp dashboard, skrypty ffmpeg/media |
+
+Wszystkie release są otagowane na GitHubie:  
+https://github.com/technoporada/ArekBox-Installer/releases
+
+---
+
+## 📋 Wymagania systemowe
 
 - Ubuntu / Debian / Linux Mint
 - Bash 5+
 - Python 3.10+
-- sudo access
+- Dostęp do `sudo`
 
-## Project Structure
+---
 
-```
+## 📁 Struktura projektu
+
+```text
 ArekBox-Installer/
-├── arekbox.sh                 # Main installer + menu
-├── arekbox-dashboard.sh       # Dashboard launcher
+├── arekbox.sh                 # Główny instalator + menu
+├── arekbox-dashboard.sh       # Uruchomienie dashboardu web
+├── yt-dlp-dashboard.sh        # Uruchomienie dashboardu yt-dlp
 ├── modules/
-│   ├── ai_tools.sh            # Ollama, TTS, Whisper, OSINT
-│   ├── dev_tools.sh           # Node, Python, Docker, Git
-│   ├── system_info.sh         # CPU, RAM, disk, network
-│   ├── fan_thinkpad.sh        # ThinkPad fan control
-│   ├── backup_tools.sh        # rsync, tar, config backup
-│   ├── gaming_tools.sh        # Steam, Lutris, Wine
+│   ├── ai_tools.sh            # Ollama, TTS, Whisper, lokalny chatbot
+│   ├── dev_tools.sh           # Node, Python, Docker, Git, Java, VS Code
+│   ├── system_info.sh         # CPU, RAM, dysk, sieć
+│   ├── fan_thinkpad.sh        # Sterowanie wentylatorem ThinkPad
+│   ├── backup_tools.sh        # Kopie pakietów, konfiguracji, home
+│   ├── gaming_tools.sh        # Steam, Lutris, Wine i inne
 │   ├── terminal_tools.sh      # tmux, fzf, bat, ripgrep
-│   ├── optimize_tools.sh      # RAM, disk, process manager
-│   ├── pdf_tools.sh           # PyPDF2 operations
-│   ├── security_tools.sh      # UFW, ClamAV, Nmap
-│   ├── multimedia_tools.sh    # yt-dlp, FFmpeg, MPV
-│   └── cleanup_tools.sh       # APT, cache, logs, snap
+│   ├── optimize_tools.sh      # RAM, dysk, procesy, tweaki
+│   ├── pdf_tools.sh           # Operacje na PDF
+│   ├── security_tools.sh      # UFW, ClamAV, Fail2ban, Nmap
+│   ├── multimedia_tools.sh    # yt-dlp, FFmpeg, MPV, OBS i inne
+│   └── cleanup_tools.sh       # Czyszczenie APT, logów, pip, snap
 ├── dashboard/
 │   ├── arekbox_dashboard.py   # Flask web dashboard
-│   ├── audio_visualizer.html  # Audio spectrum visualizer
+│   ├── audio_visualizer.html  # Wizualizator audio
 │   └── yt_dlp_dashboard.py    # yt-dlp web UI
-├── ffmpeg-scripts/            # Quick FFmpeg conversions
-├── media-scripts/             # Quick media downloads
-└── yt-dlp-dashboard.sh        # yt-dlp dashboard launcher
+├── ffmpeg-scripts/            # Szybkie konwersje FFmpeg
+├── media-scripts/             # Szybkie pobieranie mediów
+└── venvs/                     # Środowiska wirtualne Python (tworzone przy instalacji)
 ```
 
-## License
+---
 
-GNU General Public License v3.0
+## 📄 Licencja
 
-## Author
+GNU General Public License v3.0 — [LICENSE](LICENSE)
+
+---
+
+## 👤 Autor
 
 **technoporada** — [github.com/technoporada](https://github.com/technoporada)
+
+Koordynacja i nadzór: użytkownik  
+Wykonanie i poprawki bezpieczeństwa: Cline (AI asystent)

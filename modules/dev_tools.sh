@@ -40,10 +40,26 @@ install_nodejs() {
         pause; return
     fi
     echo -e "${CYAN}Instalacja Node.js...${NC}"
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    npm install -g npm@latest yarn pnpm 2>/dev/null
-    print_success "Node.js $(node --version) + npm $(npm --version)"
+    # NIE robimy: curl ... | sudo bash  (nieaudytowany kod z internetu od razu na roota = luka bezpieczeństwa)
+    # Zamiast tego: pobierz skrypt, pokaż hash SHA256 i link do źródła, zapytaj o potwierdzenie.
+    NODE_SETUP="/tmp/nodesource_setup_lts.sh"
+    if curl -fsSL "https://deb.nodesource.com/setup_lts.x" -o "$NODE_SETUP" 2>/dev/null; then
+        echo -e "${YELLOW}Pobrano skrypt nodesource do: $NODE_SETUP${NC}"
+        echo -e "${CYAN}SHA256:${NC} $(sha256sum "$NODE_SETUP" | awk '{print $1}')"
+        echo -e "${CYAN}Źródło:${NC} https://github.com/nodesource/distributions"
+        read -rp "Czy chcesz kontynuować instalację Node.js z tego skryptu? (y/N): " confirm
+        if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+            sudo -E bash "$NODE_SETUP"
+            sudo apt-get install -y nodejs
+            npm install -g npm@latest yarn pnpm 2>/dev/null
+            print_success "Node.js $(node --version) + npm $(npm --version)"
+        else
+            print_warning "Pominięto instalację Node.js."
+        fi
+        rm -f "$NODE_SETUP"
+    else
+        print_error "Nie udało się pobrać skryptu nodesource — sprawdź połączenie i certyfikaty."
+    fi
     pause
 }
 
@@ -92,9 +108,26 @@ install_docker() {
         pause; return
     fi
     echo -e "${CYAN}Instalacja Docker...${NC}"
-    curl -fsSL https://get.docker.com | sh
-    sudo usermod -aG docker "$USER"
-    print_success "Docker zainstalowany! Wyloguj się i zaloguj ponownie."
+    # NIE robimy: curl ... | sh  (nieaudytowany kod z internetu od razu na roota = luka bezpieczeństwa)
+    # Zamiast tego: pobierz skrypt, pokaż hash SHA256 i link do źródła, zapytaj o potwierdzenie.
+    DOCKER_SETUP="/tmp/get_docker.sh"
+    if curl -fsSL "https://get.docker.com" -o "$DOCKER_SETUP" 2>/dev/null; then
+        echo -e "${YELLOW}Pobrano skrypt Docker do: $DOCKER_SETUP${NC}"
+        echo -e "${CYAN}SHA256:${NC} $(sha256sum "$DOCKER_SETUP" | awk '{print $1}')"
+        echo -e "${CYAN}Źródło:${NC} https://docs.docker.com/engine/install/"
+        read -rp "Czy chcesz kontynuować instalację Dockera z tego skryptu? (y/N): " confirm
+        if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+            sh "$DOCKER_SETUP"
+            sudo usermod -aG docker "$USER"
+            print_success "Docker zainstalowany! Wyloguj się i zaloguj ponownie."
+        else
+            print_warning "Pominięto instalację Dockera."
+        fi
+        rm -f "$DOCKER_SETUP"
+    else
+        print_error "Nie udało się pobrać skryptu Docker — sprawdź połączenie i certyfikaty."
+    fi
+    pause
     pause
 }
 
